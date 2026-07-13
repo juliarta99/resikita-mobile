@@ -115,6 +115,8 @@ export const getLaporanDetail = (id: number | string) =>
   api.get(`/laporan/${id}`).then((r) => r.data.data);
 export const buatLaporan = (form: FormData) =>
   api.post("/laporan", form).then((r) => r.data);
+export const hapusLaporan = (id: number | string) =>
+  api.delete(`/laporan/${id}`).then((r) => r.data);
 export const getTpsSaya = () =>
   api.get("/direktori/tps-saya").then((r) => r.data.data);
 
@@ -146,3 +148,28 @@ export const getArtikelDetail = (slug: string) =>
 export const getSetoran = () => api.get("/setoran").then((r) => r.data);
 export const getPesanan = (params?: Record<string, any>) =>
   api.get("/pesanan", { params }).then((r) => r.data);
+
+// ---- Bank Sampah Digital (dompet) ----
+export const getDompet = () => api.get("/saldo").then((r) => r.data.data);
+export const getHargaSampah = () =>
+  api.get("/harga-sampah", { params: { grouped: 1 } }).then((r) => r.data.data);
+export const getTransaksi = () => api.get("/transaksi").then((r) => r.data);
+export const getPenarikan = () => api.get("/penarikan").then((r) => r.data);
+export const ajukanPenarikan = (body: {
+  jumlah: number;
+  nama_bank: string;
+  no_rekening: string;
+  atas_nama: string;
+}) => api.post("/penarikan", body).then((r) => r.data);
+
+// ---- Profil ----
+export const updateProfil = (body: {
+  name?: string;
+  tanggal_lahir?: string | null;
+  jenis_kelamin?: "L" | "P" | null;
+}) => api.put("/profil", body).then((r) => r.data);
+export const updatePassword = (body: {
+  password_lama: string;
+  password: string;
+  password_confirmation: string;
+}) => api.put("/profil/password", body).then((r) => r.data);

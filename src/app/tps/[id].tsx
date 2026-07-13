@@ -9,6 +9,7 @@ import React, { useCallback } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,6 +17,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const openGoogleMaps = (lat: number, lng: number) =>
+  Linking.openURL(
+    `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+  );
 
 export default function TpsDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -82,6 +88,8 @@ export default function TpsDetail() {
     );
   }
 
+  const hasCoord = tps.lat != null && tps.lng != null;
+
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
       <View style={styles.appbar}>
@@ -92,12 +100,21 @@ export default function TpsDetail() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-        <LeafletMap
-          style={styles.map}
-          center={{ lat: tps.lat, lng: tps.lng }}
-          zoom={16}
-          markers={[{ id: tps.id, lat: tps.lat, lng: tps.lng, color: "green" }]}
-        />
+        {hasCoord && (
+          <LeafletMap
+            style={styles.map}
+            center={{ lat: Number(tps.lat), lng: Number(tps.lng) }}
+            zoom={16}
+            markers={[
+              {
+                id: tps.id,
+                lat: Number(tps.lat),
+                lng: Number(tps.lng),
+                color: "green",
+              },
+            ]}
+          />
+        )}
 
         <View style={styles.body}>
           <View style={styles.titleRow}>
@@ -125,6 +142,18 @@ export default function TpsDetail() {
               icon="navigation"
               text={`${tps.jarak_km} km dari lokasi Anda`}
             />
+          )}
+
+          {/* Tombol Google Maps */}
+          {hasCoord && (
+            <Pressable
+              style={styles.mapsBtn}
+              onPress={() => openGoogleMaps(Number(tps.lat), Number(tps.lng))}
+            >
+              <Feather name="map" size={18} color={colors.brand} />
+              <Text style={styles.mapsBtnText}>Lihat di Google Maps</Text>
+              <Feather name="external-link" size={16} color={colors.brand} />
+            </Pressable>
           )}
 
           <View style={styles.stats}>
@@ -220,16 +249,6 @@ const styles = StyleSheet.create({
   },
   appbarTitle: { fontSize: 18, fontWeight: "700", color: colors.text },
   map: { height: 180 },
-  pin: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.brand,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
   body: { padding: spacing.lg },
   titleRow: {
     flexDirection: "row",
@@ -245,6 +264,19 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 },
   rowText: { color: colors.subtext, fontSize: 14, flex: 1 },
+  mapsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 16,
+    height: 48,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.brand,
+    backgroundColor: "#EAF7F1",
+  },
+  mapsBtnText: { color: colors.brand, fontWeight: "700", fontSize: 14 },
   stats: { flexDirection: "row", gap: 12, marginTop: 18 },
   stat: {
     flex: 1,

@@ -1,3 +1,4 @@
+import LeafletMap from "@/components/LeafletMap";
 import { colors, radius, spacing } from "@/constants/theme";
 import { getBankSampahDetail } from "@/lib/api";
 import { Feather } from "@expo/vector-icons";
@@ -6,6 +7,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import {
   ActivityIndicator,
   Image,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +15,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const openGoogleMaps = (lat: number, lng: number) =>
+  Linking.openURL(
+    `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+  );
 
 export default function BankSampahDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -29,6 +36,8 @@ export default function BankSampahDetail() {
     );
   }
 
+  const hasCoord = bs.lat != null && bs.lng != null;
+
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
       <View style={styles.appbar}>
@@ -39,13 +48,30 @@ export default function BankSampahDetail() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
-        <View style={styles.hero}>
-          {bs.foto ? (
-            <Image source={{ uri: bs.foto }} style={styles.heroImg} />
-          ) : (
-            <Feather name="refresh-ccw" size={40} color={colors.brand} />
-          )}
-        </View>
+        {/* Peta / hero */}
+        {hasCoord ? (
+          <LeafletMap
+            style={styles.map}
+            center={{ lat: Number(bs.lat), lng: Number(bs.lng) }}
+            zoom={16}
+            markers={[
+              {
+                id: bs.id ?? "bs",
+                lat: Number(bs.lat),
+                lng: Number(bs.lng),
+                color: "green",
+              },
+            ]}
+          />
+        ) : (
+          <View style={styles.hero}>
+            {bs.foto ? (
+              <Image source={{ uri: bs.foto }} style={styles.heroImg} />
+            ) : (
+              <Feather name="refresh-ccw" size={40} color={colors.brand} />
+            )}
+          </View>
+        )}
 
         <View style={styles.body}>
           <Text style={styles.name}>{bs.nama}</Text>
@@ -64,6 +90,18 @@ export default function BankSampahDetail() {
                 {bs.jarak_km} km dari lokasi Anda
               </Text>
             </View>
+          )}
+
+          {/* Tombol Google Maps */}
+          {hasCoord && (
+            <Pressable
+              style={styles.mapsBtn}
+              onPress={() => openGoogleMaps(Number(bs.lat), Number(bs.lng))}
+            >
+              <Feather name="map" size={18} color={colors.brand} />
+              <Text style={styles.mapsBtnText}>Lihat di Google Maps</Text>
+              <Feather name="external-link" size={16} color={colors.brand} />
+            </Pressable>
           )}
 
           <View style={styles.stats}>
@@ -106,6 +144,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   appbarTitle: { fontSize: 18, fontWeight: "700", color: colors.text },
+  map: { height: 180 },
   hero: {
     height: 170,
     backgroundColor: "#DCEFE7",
@@ -118,6 +157,19 @@ const styles = StyleSheet.create({
   name: { fontSize: 22, fontWeight: "800", color: colors.text },
   row: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   rowText: { color: colors.subtext, fontSize: 14, flex: 1 },
+  mapsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 16,
+    height: 48,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.brand,
+    backgroundColor: "#EAF7F1",
+  },
+  mapsBtnText: { color: colors.brand, fontWeight: "700", fontSize: 14 },
   stats: { flexDirection: "row", gap: 12, marginTop: 18 },
   stat: {
     flex: 1,

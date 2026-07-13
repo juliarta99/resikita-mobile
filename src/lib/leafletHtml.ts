@@ -1,15 +1,5 @@
-export type LeafletMarker = {
-  id: string | number;
-  lat: number;
-  lng: number;
-  color?: string;
-};
-type Opts = {
-  center: { lat: number; lng: number };
-  zoom?: number;
-  pick?: boolean;
-  markers?: LeafletMarker[];
-};
+export type LeafletMarker = { id: string | number; lat: number; lng: number; color?: string };
+type Opts = { center: { lat: number; lng: number }; zoom?: number; pick?: boolean; markers?: LeafletMarker[] };
 
 /** Bangun HTML peta Leaflet + OpenStreetMap (tanpa API key). */
 export function buildLeafletHtml(opts: Opts): string {

@@ -1,10 +1,11 @@
 import { colors, radius, spacing } from "@/constants/theme";
-import { getLaporanDetail } from "@/lib/api";
+import { getLaporanDetail, hapusLaporan } from "@/lib/api";
 import { Feather } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -43,15 +44,44 @@ const hhmm = (iso?: string) =>
 
 export default function ProgressLaporan() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: r, isLoading } = useQuery({
+  const qc = useQueryClient();
+  const {
+    data: r,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["laporan", id],
     queryFn: () => getLaporanDetail(id),
+    retry: 1,
   });
 
-  if (isLoading || !r) {
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.screen}>
         <ActivityIndicator color={colors.brand} style={{ marginTop: 60 }} />
+      </SafeAreaView>
+    );
+  }
+
+  if (isError || !r) {
+    return (
+      <SafeAreaView style={styles.screen} edges={["top"]}>
+        <View style={styles.appbar}>
+          <Pressable onPress={() => router.back()} hitSlop={10}>
+            <Feather name="arrow-left" size={24} color={colors.text} />
+          </Pressable>
+          <Text style={styles.appbarTitle}>Detail Laporan</Text>
+        </View>
+        <View style={{ alignItems: "center", marginTop: 50, gap: 12 }}>
+          <Feather name="alert-circle" size={30} color={colors.subtext} />
+          <Text style={{ color: colors.subtext }}>Gagal memuat laporan.</Text>
+          <Pressable onPress={() => refetch()} style={styles.retryBtn}>
+            <Text style={{ color: colors.white, fontWeight: "700" }}>
+              Coba Lagi
+            </Text>
+          </Pressable>
+        </View>
       </SafeAreaView>
     );
   }
@@ -60,7 +90,7 @@ export default function ProgressLaporan() {
   const timeline = [
     {
       title: "Laporan Diterima",
-      catatan: "Laporan Anda telah masuk ke sistem.",
+      catatan: "Laporan telah masuk ke sistem.",
       tanggal: r.tanggal,
       done: true,
     },
@@ -72,13 +102,41 @@ export default function ProgressLaporan() {
     })),
   ];
 
+  const konfirmasiHapus = () =>
+    Alert.alert(
+      "Hapus Laporan",
+      "Yakin ingin menghapus laporan ini? Tindakan ini tidak bisa dibatalkan.",
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await hapusLaporan(id);
+              qc.invalidateQueries({ queryKey: ["peta-lapor"] });
+              qc.invalidateQueries({ queryKey: ["laporan-riwayat"] });
+              router.back();
+            } catch (e: any) {
+              Alert.alert(
+                "Gagal",
+                e?.response?.data?.message ?? "Tidak dapat menghapus laporan.",
+              );
+            }
+          },
+        },
+      ],
+    );
+
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
       <View style={styles.appbar}>
         <Pressable onPress={() => router.back()} hitSlop={10}>
           <Feather name="arrow-left" size={24} color={colors.text} />
         </Pressable>
-        <Text style={styles.appbarTitle}>Progress Laporan</Text>
+        <Text style={styles.appbarTitle}>
+          {r.is_owner ? "Progress Laporan" : "Detail Laporan"}
+        </Text>
       </View>
 
       <ScrollView
@@ -114,7 +172,7 @@ export default function ProgressLaporan() {
           <Text style={styles.desc}>{r.deskripsi}</Text>
           {bukti.length > 0 && (
             <>
-              <Text style={styles.fieldLabel}>Foto Bukti Awal</Text>
+              <Text style={styles.fieldLabel}>Foto Bukti</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -128,28 +186,40 @@ export default function ProgressLaporan() {
           )}
         </View>
 
-        {/* Timeline */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Timeline Progress</Text>
-          {timeline.map((t, i) => (
-            <View key={i} style={styles.tItem}>
-              <View style={styles.tLeft}>
-                <View style={[styles.tDot, { backgroundColor: colors.brand }]}>
-                  <Feather name="check" size={12} color={colors.white} />
+        {/* Timeline hanya untuk pemilik */}
+        {r.is_owner && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Timeline Progress</Text>
+            {timeline.map((t, i) => (
+              <View key={i} style={styles.tItem}>
+                <View style={styles.tLeft}>
+                  <View
+                    style={[styles.tDot, { backgroundColor: colors.brand }]}
+                  >
+                    <Feather name="check" size={12} color={colors.white} />
+                  </View>
+                  {i < timeline.length - 1 && <View style={styles.tLine} />}
                 </View>
-                {i < timeline.length - 1 && <View style={styles.tLine} />}
-              </View>
-              <View style={{ flex: 1, paddingBottom: 18 }}>
-                <View style={styles.tHead}>
-                  <Text style={styles.tTitle}>{t.title}</Text>
-                  <Text style={styles.tTime}>{hhmm(t.tanggal)}</Text>
+                <View style={{ flex: 1, paddingBottom: 18 }}>
+                  <View style={styles.tHead}>
+                    <Text style={styles.tTitle}>{t.title}</Text>
+                    <Text style={styles.tTime}>{hhmm(t.tanggal)}</Text>
+                  </View>
+                  <Text style={styles.tDate}>{fmt(t.tanggal)}</Text>
+                  {!!t.catatan && <Text style={styles.tNote}>{t.catatan}</Text>}
                 </View>
-                <Text style={styles.tDate}>{fmt(t.tanggal)}</Text>
-                {!!t.catatan && <Text style={styles.tNote}>{t.catatan}</Text>}
               </View>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        )}
+
+        {/* Tombol hapus: hanya milik sendiri & belum diproses */}
+        {r.can_delete && (
+          <Pressable style={styles.deleteBtn} onPress={konfirmasiHapus}>
+            <Feather name="trash-2" size={18} color={colors.danger} />
+            <Text style={styles.deleteText}>Hapus Laporan</Text>
+          </Pressable>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -166,6 +236,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   appbarTitle: { fontSize: 18, fontWeight: "700", color: colors.text },
+  retryBtn: {
+    backgroundColor: colors.brand,
+    borderRadius: radius.pill,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
   card: {
     backgroundColor: colors.white,
     borderRadius: radius.md,
@@ -236,4 +312,16 @@ const styles = StyleSheet.create({
   tTime: { fontSize: 12, color: colors.subtext },
   tDate: { fontSize: 12, color: colors.subtext, marginTop: 2 },
   tNote: { fontSize: 13, color: colors.text, marginTop: 6, lineHeight: 19 },
+  deleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    height: 52,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "#FBD5D5",
+    backgroundColor: "#FEF2F2",
+  },
+  deleteText: { color: colors.danger, fontWeight: "700", fontSize: 15 },
 });

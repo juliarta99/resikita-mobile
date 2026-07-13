@@ -1,23 +1,23 @@
 import { colors, radius, spacing } from "@/constants/theme";
 import { evaluate, Stats } from "@/lib/achievements";
 import {
-    getKlasifikasiRiwayat,
-    getLaporan,
-    getPesanan,
-    getSaldo,
-    getSetoran,
-    getTpsSaya,
+  getKlasifikasiRiwayat,
+  getLaporan,
+  getPesanan,
+  getSaldo,
+  getSetoran,
+  getTpsSaya,
 } from "@/lib/api";
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import {
-    ActivityIndicator,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 

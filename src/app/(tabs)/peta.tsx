@@ -37,7 +37,7 @@ export default function Peta() {
     null,
   );
   const [center, setCenter] = useState(DEFAULT);
-  const [query, setQuery] = useState("Udayana");
+  const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
   const mapRef = React.useRef<LeafletMapHandle>(null);
 
@@ -73,31 +73,43 @@ export default function Peta() {
       sheet: "TPS Terdekat",
       unit: "lokasi",
       q: tpsQ,
+      ph: "Cari TPS...",
     },
     bank: {
       headTitle: "Peta Bank Sampah",
       sheet: "Bank Sampah",
       unit: "lokasi",
       q: bankQ,
+      ph: "Cari bank sampah...",
     },
     laporan: {
       headTitle: "Peta Laporan Terbaru",
       sheet: "Laporan Sampah",
       unit: "laporan",
       q: lapQ,
+      ph: "Cari laporan...",
     },
   }[tab];
   const data: any[] = cfg.q.data ?? [];
 
-  const cariLokasi = async () => {
-    try {
-      const res = await Location.geocodeAsync(query);
-      if (res[0]) {
-        const c = { lat: res[0].latitude, lng: res[0].longitude };
-        setCenter(c);
-        mapRef.current?.setView(c.lat, c.lng, 15);
-      }
-    } catch {}
+  // Filter sesuai kata kunci (nama TPS/Bank atau judul Laporan + alamat)
+  const term = query.trim().toLowerCase();
+  const filtered = term
+    ? data.filter(
+        (d: any) =>
+          (tab === "laporan" ? d.judul : d.nama)
+            ?.toLowerCase()
+            .includes(term) || d.alamat?.toLowerCase().includes(term),
+      )
+    : data;
+
+  const cariData = () => {
+    const first = filtered.find((d: any) => d.lat && d.lng);
+    if (first) {
+      const c = { lat: Number(first.lat), lng: Number(first.lng) };
+      setCenter(c);
+      mapRef.current?.setView(c.lat, c.lng, 16);
+    }
   };
   const keLokasiSaya = () => {
     if (!coords) return;
@@ -143,7 +155,7 @@ export default function Peta() {
           style={{ flex: 1 }}
           center={center}
           zoom={15}
-          markers={data
+          markers={filtered
             .filter((d: any) => d.lat && d.lng)
             .map((d: any) => ({
               id: d.id,
@@ -152,7 +164,7 @@ export default function Peta() {
               color: tab === "laporan" ? "amber" : "green",
             }))}
           onMarkerPress={(id: string | number) => {
-            const item = data.find((x: any) => String(x.id) === String(id));
+            const item = filtered.find((x: any) => String(x.id) === String(id));
             if (item) openDetail(item);
           }}
         />
@@ -160,13 +172,14 @@ export default function Peta() {
         {/* Search overlay */}
         <View style={styles.searchWrap}>
           <View style={styles.searchBox}>
-            <Feather name="map-pin" size={16} color={colors.subtext} />
+            <Feather name="search" size={16} color={colors.subtext} />
             <TextInput
               style={styles.searchInput}
               value={query}
               onChangeText={setQuery}
-              onSubmitEditing={cariLokasi}
-              placeholder="Cari lokasi..."
+              onSubmitEditing={cariData}
+              placeholder={cfg.ph}
+              placeholderTextColor="#9AA5B1"
               returnKeyType="search"
             />
           </View>
@@ -187,7 +200,7 @@ export default function Peta() {
             style={styles.fabRed}
             onPress={() => router.push("/lapor")}
           >
-            <Feather name="plus" size={24} color={colors.white} />
+            <Feather name="alert-triangle" size={22} color={colors.white} />
           </Pressable>
         </View>
       </View>
@@ -203,13 +216,15 @@ export default function Peta() {
         </Pressable>
         <Text style={styles.sheetTitle}>{cfg.sheet}</Text>
         <Text style={styles.sheetSub}>
-          {cfg.q.isLoading ? "Memuat…" : `${data.length} ${cfg.unit} ditemukan`}
+          {cfg.q.isLoading
+            ? "Memuat…"
+            : `${filtered.length} ${cfg.unit} ditemukan`}
         </Text>
         {cfg.q.isLoading ? (
           <ActivityIndicator color={colors.brand} style={{ marginTop: 20 }} />
         ) : (
           <FlatList
-            data={data}
+            data={filtered}
             keyExtractor={(i) => `${tab}-${i.id}`}
             contentContainerStyle={{ paddingBottom: 20, paddingTop: 8 }}
             showsVerticalScrollIndicator={false}
@@ -221,31 +236,13 @@ export default function Peta() {
               />
             )}
             ListEmptyComponent={
-              <Text style={styles.empty}>Belum ada data.</Text>
+              <Text style={styles.empty}>
+                {term ? "Tidak ada hasil yang cocok." : "Belum ada data."}
+              </Text>
             }
           />
         )}
       </View>
-    </View>
-  );
-}
-
-function MapPin({ tab }: { tab: Tab }) {
-  if (tab === "bank")
-    return (
-      <View style={[styles.pin, { backgroundColor: colors.brand }]}>
-        <Feather name="refresh-ccw" size={16} color={colors.white} />
-      </View>
-    );
-  if (tab === "laporan")
-    return (
-      <View style={[styles.pin, { backgroundColor: "#F59E0B" }]}>
-        <Feather name="alert-triangle" size={16} color={colors.white} />
-      </View>
-    );
-  return (
-    <View style={[styles.pin, { backgroundColor: colors.brand }]}>
-      <Feather name="map-pin" size={16} color={colors.white} />
     </View>
   );
 }
@@ -419,15 +416,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     elevation: 4,
-  },
-  pin: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: colors.white,
   },
   sheet: {
     backgroundColor: colors.white,

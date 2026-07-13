@@ -34,7 +34,8 @@ function Gate({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
-  // Native: muat 5 varian via expo-font. Web: {} (font sudah dari Google Fonts CSS).
+  // Native: muat 5 varian via expo-font.
+  // Web: {} -> TIDAK memakai useFonts (font dari Google Fonts CSS), agar tak ada timeout fontfaceobserver.
   const [fontsLoaded] = useFonts(
     Platform.OS === "web"
       ? {}
@@ -47,7 +48,7 @@ export default function RootLayout() {
         },
   );
 
-  // Di web langsung siap; di native tunggu font selesai.
+  // Web langsung siap; native menunggu font selesai.
   const ready = Platform.OS === "web" ? true : fontsLoaded;
 
   useEffect(() => {
