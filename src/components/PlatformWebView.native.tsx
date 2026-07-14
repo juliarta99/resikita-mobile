@@ -1,3 +1,4 @@
-import { WebView } from "@/components/PlatformWebView";
+// PlatformWebView.native.tsx
+import { WebView } from "react-native-webview";
 export { WebView };
 export default WebView;
