@@ -6,6 +6,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -92,7 +93,11 @@ export default function Register() {
 
           <View style={styles.header}>
             <View style={styles.logo}>
-              <Feather name="feather" size={26} color={colors.brand} />
+              <Image
+                source={require("@/assets/images/logo-primary.png")}
+                style={styles.logoImg}
+                resizeMode="contain"
+              />
             </View>
             <Text style={styles.brand}>Bergabung dengan Niti Resik</Text>
             <Text style={styles.tag}>Mulai perjalanan hijau Anda hari ini</Text>
@@ -217,8 +222,20 @@ export default function Register() {
           </Card>
 
           <Text style={styles.terms}>
-            Dengan mendaftar, Anda menyetujui Syarat & Ketentuan dan Kebijakan
-            Privasi
+            Dengan mendaftar, Anda menyetujui{" "}
+            <Text
+              style={styles.termsLink}
+              onPress={() => router.push("/syarat")}
+            >
+              Syarat & Ketentuan
+            </Text>{" "}
+            dan{" "}
+            <Text
+              style={styles.termsLink}
+              onPress={() => router.push("/privasi")}
+            >
+              Kebijakan Privasi
+            </Text>
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -227,6 +244,11 @@ export default function Register() {
 }
 
 const styles = StyleSheet.create({
+  termsLink: {
+    color: colors.white,
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
   screen: { flex: 1, backgroundColor: colors.bg },
   back: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   header: { alignItems: "center", marginTop: 8, marginBottom: 16 },
@@ -237,6 +259,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#DFF5EC",
     alignItems: "center",
     justifyContent: "center",
+  },
+  logoImg: {
+    width: 46,
+    height: 46,
   },
   brand: {
     color: colors.white,

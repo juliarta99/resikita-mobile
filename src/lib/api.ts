@@ -1,4 +1,5 @@
 import axios from "axios";
+import { Platform } from "react-native";
 import { storage } from "./storage";
 
 const TOKEN_KEY = "nr_token";
@@ -69,10 +70,21 @@ export const chat = (
     .then((r) => r.data.data);
 
 // Klasifikasi (multipart)
-export const klasifikasi = (uri: string) => {
+export const klasifikasi = async (uri: string) => {
   const form = new FormData();
-  form.append("gambar", { uri, name: "foto.jpg", type: "image/jpeg" } as any);
-  return api.post("/klasifikasi", form).then((r) => r.data.data);
+  if (Platform.OS === "web") {
+    // web: FormData butuh Blob asli, bukan objek {uri,...}
+    const blob = await (await fetch(uri)).blob();
+    form.append("gambar", blob, "foto.jpg");
+  } else {
+    form.append("gambar", { uri, name: "foto.jpg", type: "image/jpeg" } as any);
+  }
+  const r = await api.post("/klasifikasi", form, {
+    headers: {
+      "Content-Type": Platform.OS === "web" ? undefined : "multipart/form-data",
+    } as any,
+  });
+  return r.data.data;
 };
 
 // Direktori terdekat
@@ -113,10 +125,18 @@ export const getLaporan = (params?: Record<string, any>) =>
   api.get("/laporan", { params }).then((r) => r.data);
 export const getLaporanDetail = (id: number | string) =>
   api.get(`/laporan/${id}`).then((r) => r.data.data);
-export const buatLaporan = (form: FormData) =>
-  api.post("/laporan", form).then((r) => r.data);
 export const hapusLaporan = (id: number | string) =>
   api.delete(`/laporan/${id}`).then((r) => r.data);
+export const buatLaporan = (form: FormData) =>
+  api
+    .post("/laporan", form, {
+      // web: biarkan browser set Content-Type + boundary (jangan paksa JSON); native: multipart eksplisit
+      headers: {
+        "Content-Type":
+          Platform.OS === "web" ? undefined : "multipart/form-data",
+      } as any,
+    })
+    .then((r) => r.data);
 export const getTpsSaya = () =>
   api.get("/direktori/tps-saya").then((r) => r.data.data);
 
@@ -157,9 +177,10 @@ export const getTransaksi = () => api.get("/transaksi").then((r) => r.data);
 export const getPenarikan = () => api.get("/penarikan").then((r) => r.data);
 export const ajukanPenarikan = (body: {
   jumlah: number;
-  nama_bank: string;
   no_rekening: string;
-  atas_nama: string;
+  nama_bank?: string;
+  atas_nama?: string;
+  metode?: string;
 }) => api.post("/penarikan", body).then((r) => r.data);
 
 // ---- Profil ----
@@ -173,3 +194,35 @@ export const updatePassword = (body: {
   password: string;
   password_confirmation: string;
 }) => api.put("/profil/password", body).then((r) => r.data);
+
+// ---- E-Commerce ----
+export const getKategoriProduk = () =>
+  api.get("/kategori-produk").then((r) => r.data.data);
+export const cariTujuan = (q: string) =>
+  api.get("/ongkir/tujuan", { params: { q } }).then((r) => r.data.data);
+export const hitungOngkir = (body: {
+  destination_id: number;
+  items: { product_id: number; qty: number }[];
+  courier?: string;
+}) => api.post("/ongkir/hitung", body).then((r) => r.data.data); // { berat_gram, opsi, is_default }
+export const getProdukDetail = (id: number | string) =>
+  api.get(`/produk/${id}`).then((r) => r.data.data);
+export const buatPesanan = (body: {
+  items: { product_id: number; qty: number }[];
+  metode_bayar: "saldo" | "midtrans";
+  alamat_kirim: string;
+  ongkir?: number;
+  kurir?: string;
+}) => api.post("/pesanan", body).then((r) => r.data.data); // -> { pesanan, snap_token? }
+export const getPesananDetail = (id: number | string) =>
+  api.get(`/pesanan/${id}`).then((r) => r.data.data);
+export const batalPesanan = (id: number | string) =>
+  api.post(`/pesanan/${id}/batal`).then((r) => r.data);
+export const getTokoDetail = (umkmId: number | string) =>
+  api.get(`/direktori/umkm/${umkmId}`).then((r) => r.data.data);
+
+// ---- Ulasan ----
+export const beriUlasan = (
+  orderId: number | string,
+  body: { ulasan: { product_id: number; rating: number; komentar?: string }[] },
+) => api.post(`/pesanan/${orderId}/ulasan`, body).then((r) => r.data);

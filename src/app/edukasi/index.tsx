@@ -63,7 +63,6 @@ export default function Edukasi() {
             <Feather name="arrow-left" size={24} color={colors.white} />
           </Pressable>
           <Text style={styles.headTitle}>Pusat Edukasi</Text>
-          <Feather name="list" size={22} color={colors.white} />
         </View>
         <View style={styles.searchBox}>
           <Feather name="search" size={18} color={colors.white70} />

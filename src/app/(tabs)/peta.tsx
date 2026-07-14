@@ -1,5 +1,6 @@
 import LeafletMap, { LeafletMapHandle } from "@/components/LeafletMap";
 import { colors, radius, spacing } from "@/constants/theme";
+import { useAuth } from "@/context/AuthContext";
 import { direktori, getPetaLaporan } from "@/lib/api";
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -32,6 +33,7 @@ const DEFAULT = { lat: -8.7906, lng: 115.1663 };
 
 export default function Peta() {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("tps");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
     null,
@@ -104,7 +106,7 @@ export default function Peta() {
     : data;
 
   const cariData = () => {
-    const first = filtered.find((d: any) => d.lat && d.lng);
+    const first = filtered.find((d: any) => d.lat != null && d.lng != null);
     if (first) {
       const c = { lat: Number(first.lat), lng: Number(first.lng) };
       setCenter(c);
@@ -156,12 +158,13 @@ export default function Peta() {
           center={center}
           zoom={15}
           markers={filtered
-            .filter((d: any) => d.lat && d.lng)
+            .filter((d: any) => d.lat != null && d.lng != null)
             .map((d: any) => ({
               id: d.id,
               lat: Number(d.lat),
               lng: Number(d.lng),
               color: tab === "laporan" ? "amber" : "green",
+              label: tab === "laporan" ? d.judul : d.nama,
             }))}
           onMarkerPress={(id: string | number) => {
             const item = filtered.find((x: any) => String(x.id) === String(id));
@@ -188,21 +191,23 @@ export default function Peta() {
           </Pressable>
         </View>
 
-        {/* FABs */}
-        <View style={styles.fabs}>
-          <Pressable
-            style={styles.fabWhite}
-            onPress={() => router.push("/lapor/riwayat")}
-          >
-            <Feather name="clock" size={20} color={colors.brand} />
-          </Pressable>
-          <Pressable
-            style={styles.fabRed}
-            onPress={() => router.push("/lapor")}
-          >
-            <Feather name="alert-triangle" size={22} color={colors.white} />
-          </Pressable>
-        </View>
+        {/* FABs: hanya untuk pengguna yang sudah login */}
+        {user && (
+          <View style={styles.fabs}>
+            <Pressable
+              style={styles.fabWhite}
+              onPress={() => router.push("/lapor/riwayat")}
+            >
+              <Feather name="clock" size={20} color={colors.brand} />
+            </Pressable>
+            <Pressable
+              style={styles.fabRed}
+              onPress={() => router.push("/lapor")}
+            >
+              <Feather name="alert-triangle" size={22} color={colors.white} />
+            </Pressable>
+          </View>
+        )}
       </View>
 
       {/* Bottom sheet */}

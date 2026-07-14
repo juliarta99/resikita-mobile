@@ -1,18 +1,22 @@
 import { colors } from "@/constants/theme";
-import { Feather } from "@expo/vector-icons";
-import { StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 
 export default function Splash() {
   return (
     <View style={styles.wrap}>
-      <Feather name="feather" size={72} color={colors.white} />
+      <Image
+        source={require("@/assets/images/logo.png")}
+        style={styles.logo}
+        resizeMode="contain"
+      />
       <Text style={styles.title}>Niti Resik</Text>
-      <Text style={styles.sub}>Ekonomi Sirkular untuk Bumi Bersih</Text>
+      <Text style={styles.sub}>Bersama Wujudkan Bumi Bersih</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  logo: { width: 90, height: 90 },
   wrap: {
     flex: 1,
     backgroundColor: colors.bg,

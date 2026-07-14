@@ -77,7 +77,7 @@ export default function Chatbot() {
   useEffect(() => {
     if (id)
       getChatDetail(id)
-        .then((d) => setMessages([greeting(), ...(d.messages ?? [])]))
+        .then((d) => setMessages([greeting(), ...normalizeLoaded(d?.messages)]))
         .catch(() => {});
   }, [id]);
 
@@ -127,7 +127,7 @@ export default function Chatbot() {
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Pressable onPress={() => router.push("/")} hitSlop={10}>
           <Feather name="arrow-left" size={24} color={colors.white} />
         </Pressable>
         <View style={styles.botAvatar}>
@@ -275,12 +275,30 @@ export default function Chatbot() {
   );
 }
 
+// Rapikan pesan tersimpan (data lama bisa tak punya `at` valid / text kosong / role beda)
+function normalizeLoaded(raw: any): Msg[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((m) => m && typeof m === "object")
+    .map((m: any): Msg => {
+      const role: "user" | "model" = m.role === "user" ? "user" : "model";
+      const text = String(m.text ?? m.content ?? m.message ?? "").trim();
+      let at = Number(m.at ?? m.timestamp ?? m.created_at);
+      if (!Number.isFinite(at)) at = NaN;
+      else if (at > 0 && at < 1e12) at = at * 1000; // detik -> ms
+      return { role, text, at };
+    })
+    .filter((m) => m.text.length > 0);
+}
+
 function Bubble({ msg }: { msg: Msg }) {
   const isUser = msg.role === "user";
-  const time = new Date(msg.at).toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const time = Number.isFinite(msg.at)
+    ? new Date(msg.at).toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
   return (
     <View style={[styles.msgRow, isUser && { justifyContent: "flex-end" }]}>
       {!isUser && (
@@ -300,9 +318,11 @@ function Bubble({ msg }: { msg: Msg }) {
             <FormattedText text={msg.text} />
           )}
         </View>
-        <Text style={[styles.time, isUser && { textAlign: "right" }]}>
-          {time}
-        </Text>
+        {time !== "" && (
+          <Text style={[styles.time, isUser && { textAlign: "right" }]}>
+            {time}
+          </Text>
+        )}
       </View>
       {isUser && (
         <View style={styles.smallUser}>

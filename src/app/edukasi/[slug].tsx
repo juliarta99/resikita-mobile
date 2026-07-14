@@ -1,3 +1,4 @@
+import { WebView } from "@/components/PlatformWebView";
 import RichContent from "@/components/RichContent";
 import { colors, radius, spacing } from "@/constants/theme";
 import { getArtikelDetail } from "@/lib/api";
@@ -15,7 +16,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { WebView } from '@/components/PlatformWebView';
 
 const INFO: Record<
   string,

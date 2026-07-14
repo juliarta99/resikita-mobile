@@ -24,7 +24,7 @@ export default function Bayar() {
   const url = snap_token ? SNAP_BASE + snap_token : null;
   const isWeb = Platform.OS === "web";
 
-  // Di web: langsung buka tab baru (Snap tidak bisa dipakai penuh dalam iframe)
+  // Web: Snap tidak bisa dipilih metode-nya dalam iframe -> buka tab baru.
   useEffect(() => {
     if (isWeb && url) {
       try {
@@ -52,7 +52,6 @@ export default function Bayar() {
           </Text>
         </View>
       ) : isWeb ? (
-        // WEB: jangan iframe — arahkan ke tab pembayaran penuh
         <View style={styles.center}>
           <Feather name="external-link" size={40} color={colors.brand} />
           <Text style={styles.webTitle}>Lanjutkan Pembayaran</Text>
@@ -68,7 +67,6 @@ export default function Bayar() {
           </Pressable>
         </View>
       ) : (
-        // NATIVE: WebView asli — pilih metode berfungsi normal
         <WebView
           source={{ uri: url }}
           startInLoadingState
@@ -85,8 +83,7 @@ export default function Bayar() {
       )}
 
       <Text style={styles.note}>
-        Status keanggotaan/pesanan diperbarui otomatis setelah pembayaran
-        terkonfirmasi.
+        Status pesanan diperbarui otomatis setelah pembayaran terkonfirmasi.
       </Text>
     </SafeAreaView>
   );

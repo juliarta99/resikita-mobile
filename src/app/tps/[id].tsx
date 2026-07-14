@@ -190,26 +190,35 @@ export default function TpsDetail() {
 
       {/* CTA */}
       <View style={styles.cta}>
-        <Pressable
-          style={[
-            styles.ctaBtn,
-            sudahAktif && { backgroundColor: colors.muted },
-          ]}
-          onPress={daftar}
-          disabled={sudahAktif || loadingJoin}
-        >
-          {loadingJoin ? (
-            <ActivityIndicator color={colors.white} />
-          ) : (
-            <Text style={styles.ctaText}>
-              {sudahAktif
-                ? "Anda Sudah Nasabah"
-                : tps.berbayar
-                  ? `Daftar Nasabah • Rp${Number(tps.tarif).toLocaleString("id-ID")}`
-                  : "Daftar sebagai Nasabah"}
-            </Text>
-          )}
-        </Pressable>
+        {!user ? (
+          <Pressable
+            style={styles.ctaBtn}
+            onPress={() => router.push("/login")}
+          >
+            <Text style={styles.ctaText}>Masuk untuk Daftar</Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            style={[
+              styles.ctaBtn,
+              sudahAktif && { backgroundColor: colors.muted },
+            ]}
+            onPress={daftar}
+            disabled={sudahAktif || loadingJoin}
+          >
+            {loadingJoin ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.ctaText}>
+                {sudahAktif
+                  ? "Anda Sudah Nasabah"
+                  : tps.berbayar
+                    ? `Daftar Nasabah | Rp${Number(tps.tarif).toLocaleString("id-ID")}`
+                    : "Daftar sebagai Nasabah"}
+              </Text>
+            )}
+          </Pressable>
+        )}
       </View>
     </SafeAreaView>
   );

@@ -5,6 +5,7 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -60,16 +61,20 @@ export default function Login() {
 
           <View style={styles.header}>
             <View style={styles.logo}>
-              <Feather name="feather" size={30} color={colors.brand} />
+              <Image
+                source={require("@/assets/images/logo-primary.png")}
+                style={styles.logoImg}
+                resizeMode="contain"
+              />
             </View>
             <Text style={styles.brand}>Niti Resik</Text>
-            <Text style={styles.tag}>Ekonomi Sirkular untuk Bumi Bersih</Text>
+            <Text style={styles.tag}>Bersama Wujudkan Bumi Bersih</Text>
           </View>
 
           <Card style={styles.card}>
             <Text style={styles.title}>Selamat Datang Kembali</Text>
             <Text style={styles.subtitle}>
-              Masuk untuk melanjutkan perjalanan hijau Anda
+              Masuk untuk melanjutkan perjalanan
             </Text>
 
             <Field
@@ -133,6 +138,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#DFF5EC",
     alignItems: "center",
     justifyContent: "center",
+  },
+  logoImg: {
+    width: 46,
+    height: 46,
   },
   brand: {
     color: colors.white,
