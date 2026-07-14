@@ -89,7 +89,7 @@ export default function Hasil() {
           onPress={() => router.push("/klasifikasi/riwayat" as Href)}
           hitSlop={10}
         >
-          <Feather name="bookmark" size={22} color={colors.text} />
+          <Feather name="clock" size={22} color={colors.text} />
         </Pressable>
       </View>
 

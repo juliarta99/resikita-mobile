@@ -301,9 +301,32 @@ export default function Beranda() {
   }
 
   /* ---------------- AUTHED ---------------- */
-  const sampahKg = totalSetorKg;
+  // Bulatkan agar tidak muncul angka desimal panjang (mis. 44.6700000000000022)
+  const sampahKg = Math.round(totalSetorKg * 10) / 10; // 1 desimal, mis. 44.7
   const co2Kg = Math.round(sampahKg * 3);
   const pohon = Math.round(sampahKg / 7);
+
+  // Trend (%) setoran bulan ini vs bulan lalu. Null bila tak ada pembanding → badge disembunyikan.
+  const trendPersen: number | null = (() => {
+    const now = new Date();
+    const parseTgl = (s: any) =>
+      new Date(s.tanggal ?? s.created_at ?? s.tgl ?? 0);
+    const beratOf = (s: any) =>
+      Number(s.berat ?? s.berat_kg ?? s.total_berat ?? 0);
+    const inBulan = (s: any, y: number, m: number) => {
+      const d = parseTgl(s);
+      return d.getFullYear() === y && d.getMonth() === m;
+    };
+    const kgIni = setoranList
+      .filter((s: any) => inBulan(s, now.getFullYear(), now.getMonth()))
+      .reduce((n: number, s: any) => n + beratOf(s), 0);
+    const lalu = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const kgLalu = setoranList
+      .filter((s: any) => inBulan(s, lalu.getFullYear(), lalu.getMonth()))
+      .reduce((n: number, s: any) => n + beratOf(s), 0);
+    if (kgLalu <= 0) return null; // hindari bagi nol & angka mengada-ada
+    return Math.round(((kgIni - kgLalu) / kgLalu) * 100);
+  })();
 
   const aksi: Item[] = [
     {
@@ -352,9 +375,11 @@ export default function Beranda() {
       >
         {/* Greeting */}
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1, paddingRight: 12 }}>
             <Text style={styles.hi}>Selamat Datang,</Text>
-            <Text style={styles.brand}>{user.name}</Text>
+            <Text style={styles.brand} numberOfLines={1}>
+              {user.name}
+            </Text>
           </View>
           <Pressable
             style={styles.avatarInit}
@@ -368,17 +393,38 @@ export default function Beranda() {
         <View style={styles.saldoCard}>
           <View style={styles.saldoTop}>
             <Text style={styles.saldoLabel}>Total Saldo</Text>
-            <View style={styles.trend}>
-              <Feather name="trending-up" size={14} color={colors.white} />
-              <Text style={styles.trendText}>+12%</Text>
-            </View>
+            {trendPersen != null && (
+              <View style={styles.trend}>
+                <Feather
+                  name={trendPersen >= 0 ? "trending-up" : "trending-down"}
+                  size={14}
+                  color={colors.white}
+                />
+                <Text style={styles.trendText}>
+                  {trendPersen >= 0 ? "+" : ""}
+                  {trendPersen}%
+                </Text>
+              </View>
+            )}
           </View>
-          <Text style={styles.saldoValue}>
+          <Text
+            style={styles.saldoValue}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
             Rp {saldo.toLocaleString("id-ID")}
           </Text>
           <View style={styles.statsRow}>
-            <Stat icon="feather" label="CO₂" value={`${co2Kg} kg`} />
-            <Stat icon="trash-2" label="Sampah" value={`${sampahKg} kg`} />
+            <Stat
+              icon="feather"
+              label="CO₂"
+              value={`${co2Kg.toLocaleString("id-ID")} kg`}
+            />
+            <Stat
+              icon="trash-2"
+              label="Sampah"
+              value={`${sampahKg.toLocaleString("id-ID")} kg`}
+            />
             <Stat icon="feather" label="Pohon" value={`${pohon}`} />
           </View>
         </View>
@@ -412,7 +458,11 @@ export default function Beranda() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: 12 }}
+          contentContainerStyle={{
+            paddingHorizontal: spacing.lg,
+            gap: 12,
+            backgroundColor: colors.card,
+          }}
         >
           {achievements.map((a) => (
             <View
@@ -570,8 +620,12 @@ function Stat({
   return (
     <View style={styles.stat}>
       <Feather name={icon} size={16} color={colors.white} />
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel} numberOfLines={1}>
+        {label}
+      </Text>
+      <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -732,11 +786,17 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.14)",
     borderRadius: radius.md,
     paddingVertical: 12,
+    paddingHorizontal: 8,
     alignItems: "center",
     gap: 4,
   },
   statLabel: { color: colors.white70, fontSize: 12 },
-  statValue: { color: colors.white, fontSize: 15, fontWeight: "700" },
+  statValue: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: "700",
+    textAlign: "center",
+  },
   sheet: {
     backgroundColor: colors.card,
     borderTopLeftRadius: 24,

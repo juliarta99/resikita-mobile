@@ -38,7 +38,7 @@ function fmtExpo(a?: Location.LocationGeocodedAddress): string {
     .join(", ");
 }
 
-// Reverse geocode: coba expo dulu (native OK), fallback ke OpenStreetMap Nominatim (jalan di web tanpa API key)
+// Reverse geocode: expo dulu (native), fallback Nominatim (web). Selalu selesai (ada timeout).
 async function reverseAddr(lat: number, lng: number): Promise<string> {
   try {
     const g = await Location.reverseGeocodeAsync({
@@ -48,14 +48,20 @@ async function reverseAddr(lat: number, lng: number): Promise<string> {
     const s = fmtExpo(g?.[0]);
     if (s) return s;
   } catch {}
+
   try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 6000); // batalkan bila > 6 detik
     const r = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-      { headers: { Accept: "application/json" } },
+      { headers: { Accept: "application/json" }, signal: ctrl.signal },
     );
+    clearTimeout(timer);
     const j = await r.json();
     if (j?.display_name) return j.display_name as string;
   } catch {}
+
+  // Fallback terakhir: tampilkan koordinat, jangan biarkan kosong / menggantung
   return `Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`;
 }
 
@@ -99,9 +105,12 @@ export default function BuatLaporan() {
     setCoord({ lat, lng });
     if (moveMap) mapRef.current?.setView(lat, lng, 16);
     setGeoLoading(true);
-    const a = await reverseAddr(lat, lng);
-    setAlamat(a);
-    setGeoLoading(false);
+    try {
+      const a = await reverseAddr(lat, lng);
+      setAlamat(a);
+    } finally {
+      setGeoLoading(false); // apa pun hasilnya, spinner berhenti
+    }
   };
 
   // Deteksi lokasi saat ini di awal
@@ -138,6 +147,7 @@ export default function BuatLaporan() {
       });
       await setDariKoordinat(p.coords.latitude, p.coords.longitude, true);
     } catch {
+      setGeoLoading(false);
       Alert.alert("Gagal", "Tidak dapat mendeteksi lokasi.");
     }
   };

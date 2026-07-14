@@ -1,5 +1,5 @@
 import { colors, radius, spacing } from "@/constants/theme";
-import { batalPesanan, getPesananDetail } from "@/lib/api";
+import { batalPesanan, bayarUlangPesanan, getPesananDetail } from "@/lib/api";
 import { notify } from "@/lib/dialog";
 import { reorderItems } from "@/lib/reorder";
 import { Feather } from "@expo/vector-icons";
@@ -56,6 +56,10 @@ export default function DetailPesanan() {
     retry: 1,
   });
 
+  // Semua hook harus di atas, sebelum return kondisional apa pun.
+  const [beliLoading, setBeliLoading] = React.useState(false);
+  const [bayarLoading, setBayarLoading] = React.useState(false);
+
   if (isLoading)
     return (
       <SafeAreaView style={styles.screen}>
@@ -89,7 +93,8 @@ export default function DetailPesanan() {
   const dibatalkan = o.status === "dibatalkan";
   const currentIdx = FLOW.indexOf(o.status);
   const bisaBatal = o.status === "menunggu_bayar" || o.status === "dibayar";
-  const [beliLoading, setBeliLoading] = React.useState(false);
+  const bisaBayar =
+    o.status === "menunggu_bayar" && o.metode_bayar === "midtrans";
 
   const beliLagi = async () => {
     setBeliLoading(true);
@@ -97,6 +102,29 @@ export default function DetailPesanan() {
     setBeliLoading(false);
     if (ditambah > 0) router.push("/keranjang" as any);
     else notify("Beli Lagi", "Produk pada pesanan ini tidak lagi tersedia.");
+  };
+
+  const bayarSekarang = async () => {
+    setBayarLoading(true);
+    try {
+      // Pakai token tersimpan bila ada; kalau kosong/kedaluwarsa minta token baru.
+      let token = o.snap_token;
+      if (!token) {
+        const res = await bayarUlangPesanan(id);
+        token = res.snap_token;
+      }
+      router.push({
+        pathname: "/bayar",
+        params: { snap_token: token, title: "Pembayaran Pesanan" },
+      });
+    } catch (e: any) {
+      Alert.alert(
+        "Gagal",
+        e?.response?.data?.message ?? "Tidak dapat memproses pembayaran.",
+      );
+    } finally {
+      setBayarLoading(false);
+    }
   };
 
   const batal = () =>
@@ -248,6 +276,24 @@ export default function DetailPesanan() {
           </Text>
         </View>
 
+        {/* Bayar Sekarang (Midtrans, belum dibayar) */}
+        {bisaBayar && (
+          <Pressable
+            style={[styles.bayarBtn, bayarLoading && { opacity: 0.6 }]}
+            onPress={bayarSekarang}
+            disabled={bayarLoading}
+          >
+            {bayarLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Feather name="credit-card" size={18} color="#fff" />
+                <Text style={styles.bayarText}>Bayar Sekarang</Text>
+              </>
+            )}
+          </Pressable>
+        )}
+
         <Pressable
           style={[styles.beliLagiBtn, beliLoading && { opacity: 0.6 }]}
           onPress={beliLagi}
@@ -381,6 +427,17 @@ const styles = StyleSheet.create({
   grandLabel: { fontSize: 15, fontWeight: "700", color: colors.text },
   grandVal: { fontSize: 17, fontWeight: "800", color: colors.brand },
   metode: { color: colors.subtext, fontSize: 13, marginTop: 10 },
+  bayarBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    height: 52,
+    borderRadius: radius.md,
+    backgroundColor: "#F59E0B",
+    marginTop: 16,
+  },
+  bayarText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   beliLagiBtn: {
     flexDirection: "row",
     alignItems: "center",

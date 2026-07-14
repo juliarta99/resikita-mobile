@@ -98,9 +98,12 @@ export default function Profil() {
   };
   const achievements = evaluate(stats);
 
-  const co2Kg = Math.round(totalSetorKg * 3);
-  const pohon = Math.round(totalSetorKg / 7);
-  const ribu = (n: number) => (n >= 1000 ? `${Math.round(n / 1000)}K` : `${n}`);
+  // Bulatkan agar tidak muncul angka desimal panjang (mis. 44.6700000000000022)
+  const setorKg = Math.round(totalSetorKg * 10) / 10; // 1 desimal, mis. 44.7
+  const co2Kg = Math.round(setorKg * 3);
+  const pohon = Math.round(setorKg / 7);
+  const ribu = (n: number) =>
+    n >= 1000 ? `${Math.round(n / 1000)}K` : `${Math.round(n)}`;
 
   if (!user) {
     return (
@@ -150,8 +153,14 @@ export default function Profil() {
             <Text style={styles.avatarText}>{initials(user.name)}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.name}>{user.name}</Text>
-            {!!user.email && <Text style={styles.email}>{user.email}</Text>}
+            <Text style={styles.name} numberOfLines={1}>
+              {user.name}
+            </Text>
+            {!!user.email && (
+              <Text style={styles.email} numberOfLines={1}>
+                {user.email}
+              </Text>
+            )}
             {!!user.kode_qr && (
               <Text style={styles.idNasabah}>ID: {user.kode_qr}</Text>
             )}
@@ -176,14 +185,16 @@ export default function Profil() {
             <Stat
               icon="refresh-ccw"
               label="Daur Ulang"
-              value={`${totalSetorKg}kg`}
+              value={`${setorKg.toLocaleString("id-ID")} kg`}
             />
           </View>
           <View style={styles.divider} />
           <View style={styles.ecoRow}>
             <View style={styles.ecoBox}>
               <Text style={styles.ecoLabel}>CO₂ Tersimpan</Text>
-              <Text style={styles.ecoValue}>{co2Kg} kg</Text>
+              <Text style={styles.ecoValue}>
+                {co2Kg.toLocaleString("id-ID")} kg
+              </Text>
             </View>
             <View style={styles.ecoBox}>
               <Text style={styles.ecoLabel}>Setara Pohon</Text>
@@ -273,8 +284,12 @@ function Stat({
       <View style={styles.statIcon}>
         <Feather name={icon} size={18} color={colors.brand} />
       </View>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel} numberOfLines={1}>
+        {label}
+      </Text>
+      <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -329,7 +344,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
   statsRow: { flexDirection: "row" },
-  stat: { flex: 1, alignItems: "center", gap: 6 },
+  stat: { flex: 1, alignItems: "center", gap: 6, paddingHorizontal: 4 },
   statIcon: {
     width: 44,
     height: 44,
@@ -339,7 +354,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   statLabel: { fontSize: 12, color: colors.subtext },
-  statValue: { fontSize: 16, fontWeight: "700", color: colors.text },
+  statValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.text,
+    textAlign: "center",
+  },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 16 },
   ecoRow: { flexDirection: "row", gap: 12 },
   ecoBox: {

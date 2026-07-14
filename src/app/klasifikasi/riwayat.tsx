@@ -86,7 +86,6 @@ export default function RiwayatKlasifikasi() {
           <Feather name="arrow-left" size={24} color={colors.text} />
         </Pressable>
         <Text style={styles.appbarTitle}>Riwayat Klasifikasi</Text>
-        <Feather name="calendar" size={22} color={colors.text} />
       </View>
       <View style={styles.searchWrap}>
         <Feather name="search" size={18} color={colors.subtext} />

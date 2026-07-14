@@ -218,6 +218,8 @@ export const getPesananDetail = (id: number | string) =>
   api.get(`/pesanan/${id}`).then((r) => r.data.data);
 export const batalPesanan = (id: number | string) =>
   api.post(`/pesanan/${id}/batal`).then((r) => r.data);
+export const bayarUlangPesanan = (id: number | string) =>
+  api.post(`/pesanan/${id}/bayar-ulang`).then((r) => r.data.data); // -> { snap_token }
 export const getTokoDetail = (umkmId: number | string) =>
   api.get(`/direktori/umkm/${umkmId}`).then((r) => r.data.data);
 
