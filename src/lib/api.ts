@@ -83,6 +83,7 @@ export const klasifikasi = async (uri: string) => {
     headers: {
       "Content-Type": Platform.OS === "web" ? undefined : "multipart/form-data",
     } as any,
+    timeout: 90000, // inferensi AI + upload butuh lebih dari 30 dtk default
   });
   return r.data.data;
 };

@@ -1,4 +1,5 @@
 import { colors, radius, spacing } from "@/constants/theme";
+import { fotoSementara } from "@/lib/fotoSementara";
 import { Feather } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
@@ -40,28 +41,29 @@ export default function Kamera() {
     if (busy) return;
     setBusy(true);
     try {
-      const photo = await camRef.current?.takePictureAsync({ quality: 0.7 });
-      if (photo?.uri)
-        router.replace({
-          pathname: "/klasifikasi/hasil",
-          params: { uri: photo.uri },
-        } as unknown as Href);
+      const photo = await camRef.current?.takePictureAsync({ quality: 0.6 });
+      if (photo?.uri) {
+        // URI disimpan di memori — JANGAN dioper lewat params router,
+        // karena akan rusak oleh encode/decode URL (lihat lib/fotoSementara.ts)
+        fotoSementara.set(photo.uri);
+        router.replace("/klasifikasi/hasil" as Href);
+      }
     } finally {
       setBusy(false);
     }
   };
+
   const galeri = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) return;
     const res = await ImagePicker.launchImageLibraryAsync({
-      quality: 0.7,
+      quality: 0.6,
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
     });
-    if (!res.canceled && res.assets[0])
-      router.replace({
-        pathname: "/klasifikasi/hasil",
-        params: { uri: res.assets[0].uri },
-      } as unknown as Href);
+    if (!res.canceled && res.assets[0]) {
+      fotoSementara.set(res.assets[0].uri);
+      router.replace("/klasifikasi/hasil" as Href);
+    }
   };
 
   return (

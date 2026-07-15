@@ -1,9 +1,10 @@
 import TypingDots from "@/components/TypingDots";
 import { colors, radius, spacing } from "@/constants/theme";
 import { klasifikasi } from "@/lib/api";
+import { fotoSementara } from "@/lib/fotoSementara";
 import { katColor } from "@/lib/katColor";
 import { Feather } from "@expo/vector-icons";
-import { Href, router, useLocalSearchParams } from "expo-router";
+import { Href, router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Image,
@@ -16,12 +17,22 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Hasil() {
-  const { uri } = useLocalSearchParams<{ uri: string }>();
+  // Ambil URI dari memori, BUKAN dari params router.
+  // useState(() => ...) memastikan nilainya dibaca sekali saat mount,
+  // sehingga tetap ada meski penampung dibersihkan kemudian.
+  const [uri] = useState(() => fotoSementara.get());
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
 
   useEffect(() => {
+    if (!uri) {
+      setError("Foto tidak ditemukan. Silakan pindai ulang.");
+      setLoading(false);
+      return;
+    }
+
     let alive = true;
     (async () => {
       try {
@@ -31,6 +42,10 @@ export default function Hasil() {
           setLoading(false);
         }
       } catch (e: any) {
+        console.log("=== KLASIFIKASI GAGAL ===");
+        console.log("status :", e?.response?.status);
+        console.log("data   :", JSON.stringify(e?.response?.data));
+        console.log("message:", e?.message);
         if (alive) {
           setError(
             e?.response?.data?.message ?? "Klasifikasi gagal. Coba lagi.",
@@ -96,11 +111,13 @@ export default function Hasil() {
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Gambar + bounding box */}
         <View style={styles.imgWrap}>
-          <Image
-            source={{ uri }}
-            style={StyleSheet.absoluteFill as any}
-            resizeMode="cover"
-          />
+          {!!uri && (
+            <Image
+              source={{ uri }}
+              style={StyleSheet.absoluteFill as any}
+              resizeMode="cover"
+            />
+          )}
           <View style={styles.boxLabel}>
             <Text style={styles.boxLabelText}>{data.hasil_jenis}</Text>
           </View>
@@ -168,7 +185,10 @@ export default function Hasil() {
 
         <Pressable
           style={styles.again}
-          onPress={() => router.replace("/aksi" as Href)}
+          onPress={() => {
+            fotoSementara.clear();
+            router.replace("/aksi" as Href);
+          }}
         >
           <Feather name="camera" size={18} color={colors.white} />
           <Text style={styles.againText}>Pindai Lagi</Text>
