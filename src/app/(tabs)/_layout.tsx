@@ -3,6 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Feather } from "@expo/vector-icons";
 import { Tabs, router, type Href } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function CenterButton() {
   const { user } = useAuth();
@@ -24,13 +25,26 @@ function CenterButton() {
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+
+  // Ruang untuk tombol navigasi HP (3-tombol / gesture bar / poni iPhone).
+  // Bila HP tak punya nav bar (insets.bottom = 0), tetap sisakan 8px
+  // agar ikon tidak mepet ke tepi layar.
+  const bottomPad = insets.bottom || 8;
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: "#94A3B8",
-        tabBarStyle: { height: 66, paddingTop: 6, paddingBottom: 8 },
+        tabBarStyle: {
+          // Tinggi isi (66) HARUS ditambah tinggi nav bar,
+          // kalau tidak isinya terjepit saat padding bertambah.
+          height: 66 + insets.bottom,
+          paddingTop: 6,
+          paddingBottom: bottomPad,
+        },
         tabBarLabelStyle: { fontSize: 11 },
       }}
     >

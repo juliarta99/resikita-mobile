@@ -15,6 +15,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
 import { Platform } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 // Native: patch <Text> global -> Plus Jakarta Sans.
 // Web: inject Google Fonts + CSS (tanpa fontfaceobserver).
@@ -58,21 +59,27 @@ export default function RootLayout() {
   if (!ready) return <Splash />;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <StatusBar style="light" />
-        <Gate>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: "#0E7A5C" },
-            }}
-          >
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="(auth)" />
-          </Stack>
-        </Gate>
-      </AuthProvider>
-    </QueryClientProvider>
+    // SafeAreaProvider WAJIB membungkus seluruh aplikasi.
+    // Tanpa ini, useSafeAreaInsets() selalu mengembalikan 0 di semua layar,
+    // sehingga bottom bar tertutup tombol navigasi HP dan
+    // <SafeAreaView edges={["bottom"]}> tidak berpengaruh sama sekali.
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <StatusBar style="light" />
+          <Gate>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: "#0E7A5C" },
+              }}
+            >
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(auth)" />
+            </Stack>
+          </Gate>
+        </AuthProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }

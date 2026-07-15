@@ -1,7 +1,9 @@
+import BottomBar from "@/components/BottomBar";
 import { colors, radius, spacing } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { getProdukDetail } from "@/lib/api";
 import { cart, useCart } from "@/lib/cart";
+import { useBottomPad } from "@/lib/useBottomPad";
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
@@ -38,6 +40,9 @@ export default function DetailProduk() {
   const items = useCart();
   const cartCount = items.reduce((n, i) => n + i.qty, 0);
 
+  // Ruang bawah ScrollView: tinggi bar aksi + tombol navigasi HP.
+  const pad = useBottomPad(100);
+
   if (isLoading)
     return (
       <SafeAreaView style={styles.screen}>
@@ -47,7 +52,8 @@ export default function DetailProduk() {
   if (isError || !p)
     return (
       <SafeAreaView style={styles.screen} edges={["top"]}>
-        <Bar cartCount={cartCount} />
+        {/* `user` WAJIB dioper — tanpa ini ikon keranjang tak pernah tampil */}
+        <Bar cartCount={cartCount} user={user} />
         <View style={{ alignItems: "center", marginTop: 50, gap: 12 }}>
           <Text style={{ color: colors.subtext }}>Gagal memuat produk.</Text>
           <Pressable onPress={() => refetch()} style={styles.retry}>
@@ -92,8 +98,8 @@ export default function DetailProduk() {
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
-      <Bar cartCount={cartCount} />
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+      <Bar cartCount={cartCount} user={user} />
+      <ScrollView contentContainerStyle={{ paddingBottom: pad }}>
         <View style={styles.hero}>
           {gambar[imgIdx] ? (
             <Image source={{ uri: gambar[imgIdx] }} style={styles.heroImg} />
@@ -185,8 +191,13 @@ export default function DetailProduk() {
         </View>
       </ScrollView>
 
-      {/* Bottom bar */}
-      <View style={styles.bottom}>
+      {/* Bar aksi — BottomBar menangani posisi, latar, garis, & nav bar HP.
+          padH/padV disetel agar serapat gaya lama (spacing.md / 12). */}
+      <BottomBar
+        padH={spacing.md}
+        padV={12}
+        style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+      >
         {!user ? (
           <Pressable
             style={styles.loginBtn}
@@ -236,7 +247,7 @@ export default function DetailProduk() {
             </Pressable>
           </>
         )}
-      </View>
+      </BottomBar>
     </SafeAreaView>
   );
 }
@@ -421,20 +432,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   desc: { fontSize: 14, color: "#334155", lineHeight: 21 },
-  bottom: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
+  // styles.bottom DIHAPUS — posisi, latar, garis atas, dan ruang nav bar HP
+  // kini ditangani komponen <BottomBar>.
   qtyBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -470,7 +469,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  buyBtnText: { color: colors.white, fontWeight: "700", fontSize: 15 },
+  buyBtnText: { color: colors.white, fontWeight: "700", fontSize: 12 },
   loginBtn: {
     flex: 1,
     flexDirection: "row",

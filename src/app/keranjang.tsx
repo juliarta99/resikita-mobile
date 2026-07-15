@@ -1,14 +1,15 @@
+import BottomBar from "@/components/BottomBar";
 import { colors, radius, spacing } from "@/constants/theme";
 import { cart, CartItem, useCart } from "@/lib/cart";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import {
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -24,7 +25,12 @@ export default function Keranjang() {
   const gratisOngkir = subtotal >= GRATIS_MIN;
 
   return (
-    <SafeAreaView style={styles.screen} edges={["top"]}>
+    // edges "bottom" dipakai agar state kosong (tanpa bar) juga aman
+    // dari tombol navigasi HP.
+    <SafeAreaView
+      style={styles.screen}
+      edges={items.length === 0 ? ["top", "bottom"] : ["top"]}
+    >
       <View style={styles.appbar}>
         <Pressable onPress={() => router.back()} hitSlop={10}>
           <Feather name="arrow-left" size={24} color={colors.text} />
@@ -48,6 +54,8 @@ export default function Keranjang() {
         </View>
       ) : (
         <>
+          {/* Bar di layar ini IKUT ALUR konten (bukan melayang), sehingga
+              ScrollView tidak perlu paddingBottom tambahan. */}
           <ScrollView
             contentContainerStyle={{ padding: spacing.md, paddingBottom: 20 }}
           >
@@ -114,7 +122,9 @@ export default function Keranjang() {
             </View>
           </ScrollView>
 
-          <View style={styles.bottom}>
+          {/* `static` = bar ikut alur konten, tidak melayang menimpa layar.
+              Ruang untuk tombol navigasi HP tetap ditangani BottomBar. */}
+          <BottomBar static>
             <View style={styles.sumRow}>
               <Text style={styles.sumLabel}>
                 Subtotal ({items.length} item)
@@ -145,7 +155,7 @@ export default function Keranjang() {
                 {items.reduce((n: number, i: CartItem) => n + i.qty, 0)})
               </Text>
             </Pressable>
-          </View>
+          </BottomBar>
         </>
       )}
     </SafeAreaView>
@@ -247,12 +257,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   ongkirText: { flex: 1, fontSize: 13, color: "#334155" },
-  bottom: {
-    backgroundColor: colors.white,
-    padding: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
+  // styles.bottom DIHAPUS — latar, garis atas, padding, dan ruang nav bar HP
+  // kini ditangani komponen <BottomBar static>.
   sumRow: {
     flexDirection: "row",
     justifyContent: "space-between",

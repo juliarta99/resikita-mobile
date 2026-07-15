@@ -1,3 +1,4 @@
+import BottomBar from "@/components/BottomBar";
 import { colors, radius, spacing } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { buatPesanan, cariTujuan, getSaldo, hitungOngkir } from "@/lib/api";
@@ -245,6 +246,8 @@ export default function Checkout() {
         <Text style={styles.appbarTitle}>Checkout</Text>
       </View>
 
+      {/* Bar bawah di layar ini IKUT ALUR konten (bukan melayang),
+          sehingga ScrollView tidak perlu paddingBottom tambahan. */}
       <ScrollView
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: 30 }}
         keyboardShouldPersistTaps="handled"
@@ -450,7 +453,16 @@ export default function Checkout() {
         </View>
       </ScrollView>
 
-      <View style={styles.bottom}>
+      {/* `static` = bar ikut alur konten. Ruang untuk tombol navigasi HP
+          tetap ditangani BottomBar. */}
+      <BottomBar
+        static
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <View>
           <Text style={styles.totalLabel}>Total Pembayaran</Text>
           <Text style={styles.totalValue}>{rp(grand)}</Text>
@@ -458,7 +470,9 @@ export default function Checkout() {
         <Pressable
           style={[styles.orderBtn, (!bisaOrder || loading) && { opacity: 0.5 }]}
           onPress={buat}
-          disabled={loading}
+          // `!bisaOrder` ikut disertakan: dulu tombol terlihat redup tetapi
+          // masih bisa ditekan, sehingga pengguna baru dihadang Alert.
+          disabled={!bisaOrder || loading}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
@@ -466,7 +480,7 @@ export default function Checkout() {
             <Text style={styles.orderText}>Buat Pesanan</Text>
           )}
         </Pressable>
-      </View>
+      </BottomBar>
     </SafeAreaView>
   );
 }
@@ -623,15 +637,8 @@ const styles = StyleSheet.create({
   },
   sumLabel: { color: colors.subtext, fontSize: 14 },
   sumValue: { color: colors.text, fontWeight: "600" },
-  bottom: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: colors.white,
-    padding: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
+  // styles.bottom DIHAPUS — latar, garis atas, padding, dan ruang nav bar HP
+  // kini ditangani komponen <BottomBar static>.
   totalLabel: { color: colors.subtext, fontSize: 13 },
   totalValue: { color: colors.text, fontSize: 20, fontWeight: "800" },
   orderBtn: {

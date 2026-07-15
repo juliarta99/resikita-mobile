@@ -18,7 +18,10 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 type Msg = { role: "user" | "model"; text: string; at: number };
 
@@ -59,6 +62,11 @@ export default function Chatbot() {
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameText, setRenameText] = useState("");
   const [savingRename, setSavingRename] = useState(false);
+
+  // Layar ini TIDAK memakai <BottomBar>: bar bawahnya berupa input +
+  // disclaimer yang menyatu dengan latar body, bukan tombol CTA berlatar
+  // putih. Jadi ruang nav bar HP disuntik langsung ke elemen terbawah.
+  const insets = useSafeAreaInsets();
 
   const simpanRename = async () => {
     if (!convoId || !renameText.trim()) return;
@@ -215,11 +223,17 @@ export default function Chatbot() {
                 (!input.trim() || typing) && { opacity: 0.5 },
               ]}
               onPress={() => send(input)}
+              // dulu hanya tampak redup tapi tetap bisa ditekan
+              disabled={!input.trim() || typing}
             >
               <Feather name="send" size={18} color={colors.white} />
             </Pressable>
           </View>
-          <Text style={styles.disclaimer}>
+
+          {/* Elemen terbawah: padding bawah = 8 + tinggi nav bar HP */}
+          <Text
+            style={[styles.disclaimer, { paddingBottom: 8 + insets.bottom }]}
+          >
             Chatbot dapat memberikan informasi yang tidak akurat. Verifikasi
             jawaban penting.
           </Text>
@@ -518,7 +532,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: colors.subtext,
     fontSize: 11,
-    paddingVertical: 8,
+    paddingTop: 8,
+    // paddingBottom disuntik dari insets di komponen
     paddingHorizontal: 20,
   },
   backdrop: {

@@ -1,6 +1,7 @@
 import { colors, radius, spacing } from "@/constants/theme";
 import { gantiJudulChat, getChatRiwayat, hapusChat } from "@/lib/api";
 import { confirmDialog, notify } from "@/lib/dialog";
+import { useBottomPad } from "@/lib/useBottomPad";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useFocusEffect } from "expo-router";
@@ -13,9 +14,12 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 function dayLabel(iso: string) {
   const ts = new Date(iso).getTime();
@@ -45,6 +49,11 @@ export default function Riwayat() {
   const [renameId, setRenameId] = useState<number | null>(null);
   const [renameText, setRenameText] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Layar ini memakai FAB (tombol bundar melayang), bukan bar penuh —
+  // jadi <BottomBar> tidak dipakai; insets disuntik langsung ke FAB.
+  const insets = useSafeAreaInsets();
+  const pad = useBottomPad(100);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["chat-riwayat"],
@@ -144,7 +153,8 @@ export default function Riwayat() {
           keyExtractor={(r, i) =>
             r.type === "header" ? `h-${r.label}-${i}` : `c-${r.c.id}`
           }
-          contentContainerStyle={{ padding: spacing.md, paddingBottom: 100 }}
+          // Ruang bawah: tinggi FAB + tombol navigasi HP
+          contentContainerStyle={{ padding: spacing.md, paddingBottom: pad }}
           renderItem={({ item }) =>
             item.type === "header" ? (
               <Text style={styles.dateLabel}>{item.label}</Text>
@@ -242,7 +252,11 @@ export default function Riwayat() {
         />
       )}
 
-      <Pressable style={styles.fab} onPress={() => router.push("/chatbot")}>
+      {/* FAB — didorong ke atas setinggi tombol navigasi HP */}
+      <Pressable
+        style={[styles.fab, { bottom: 30 + insets.bottom }]}
+        onPress={() => router.push("/chatbot")}
+      >
         <Feather name="message-circle" size={24} color={colors.white} />
       </Pressable>
 
@@ -416,7 +430,7 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 20,
-    bottom: 30,
+    // `bottom` disuntik dari insets di komponen (dulu tetap 30)
     width: 56,
     height: 56,
     borderRadius: 28,

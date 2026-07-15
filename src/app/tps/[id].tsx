@@ -1,7 +1,9 @@
+import BottomBar from "@/components/BottomBar";
 import LeafletMap from "@/components/LeafletMap";
 import { colors, radius, spacing } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { gabungTps, getTpsDetail, getTpsSaya } from "@/lib/api";
+import { useBottomPad } from "@/lib/useBottomPad";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -28,6 +30,9 @@ export default function TpsDetail() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [loadingJoin, setLoadingJoin] = React.useState(false);
+
+  // Ruang bawah untuk ScrollView: tinggi CTA + tombol navigasi HP.
+  const pad = useBottomPad();
 
   const detailQ = useQuery({
     queryKey: ["tps", id],
@@ -99,7 +104,7 @@ export default function TpsDetail() {
         <Text style={styles.appbarTitle}>Detail TPS</Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: pad }}>
         {hasCoord && (
           <LeafletMap
             style={styles.map}
@@ -188,8 +193,8 @@ export default function TpsDetail() {
         </View>
       </ScrollView>
 
-      {/* CTA */}
-      <View style={styles.cta}>
+      {/* CTA — BottomBar sudah menangani posisi, latar, garis, & nav bar HP */}
+      <BottomBar>
         {!user ? (
           <Pressable
             style={styles.ctaBtn}
@@ -219,7 +224,7 @@ export default function TpsDetail() {
             )}
           </Pressable>
         )}
-      </View>
+      </BottomBar>
     </SafeAreaView>
   );
 }
@@ -319,16 +324,8 @@ const styles = StyleSheet.create({
   },
   infoLabel: { color: colors.subtext, fontSize: 12 },
   infoVal: { color: colors.text, fontSize: 15, fontWeight: "600" },
-  cta: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: spacing.lg,
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
+  // styles.cta DIHAPUS — posisi, latar, garis atas, dan ruang nav bar HP
+  // kini ditangani komponen <BottomBar>.
   ctaBtn: {
     height: 52,
     borderRadius: radius.md,
