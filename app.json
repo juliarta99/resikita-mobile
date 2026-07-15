@@ -8,6 +8,8 @@
     "scheme": "nitiresikmasyarakat",
     "userInterfaceStyle": "light",
     "android": {
+      "package": "com.juliarta99.nitiresik",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#057D5D",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -37,6 +39,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e9b4350c-c115-4f87-a1bc-dc626973f4ef"
+      }
     }
   }
 }
