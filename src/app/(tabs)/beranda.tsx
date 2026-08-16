@@ -1,21 +1,17 @@
+import KartuArtikel from "@/components/KartuArtikel";
 import { colors, radius, spacing } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { evaluate, Stats } from "@/lib/achievements";
-import {
-  getArtikel,
-  getKlasifikasiRiwayat,
-  getLaporan,
-  getPesanan,
-  getSaldo,
-  getSetoran,
-  getTpsSaya,
-} from "@/lib/api";
-import { tipeMeta } from "@/lib/tipeMeta";
+import { useJumlahNotifikasi } from "@/hooks/useNotifikasi";
+import { useStatistikSaya } from "@/hooks/useStatistikSaya";
+import { daftarArtikel } from "@/lib/api/artikel";
+import { statistikPublik } from "@/lib/api/publik";
+import { notify } from "@/lib/dialog";
+import { formatRupiah } from "@/lib/rupiah";
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import { router } from "expo-router";
+import { type Href, router } from "expo-router";
 import {
-  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -42,61 +38,43 @@ const initials = (name: string) =>
 
 export default function Beranda() {
   const { user } = useAuth();
-  const soon = () => Alert.alert("Segera", "Fitur ini akan segera hadir.");
+  const soon = () => notify("Segera", "Fitur ini akan segera hadir.");
   const enabled = !!user;
 
-  // Data untuk ringkasan + pencapaian
-  const saldoQ = useQuery({ queryKey: ["saldo"], queryFn: getSaldo, enabled });
-  const setoranQ = useQuery({
-    queryKey: ["setoran"],
-    queryFn: getSetoran,
-    enabled,
-  });
-  const pesananQ = useQuery({
-    queryKey: ["pesanan-ringkas"],
-    queryFn: () => getPesanan(),
-    enabled,
-  });
-  const laporanQ = useQuery({
-    queryKey: ["laporan-ringkas"],
-    queryFn: () => getLaporan(),
-    enabled,
-  });
-  const klasQ = useQuery({
-    queryKey: ["klas-ringkas"],
-    queryFn: () => getKlasifikasiRiwayat(),
-    enabled,
-  });
-  const tpsQ = useQuery({
-    queryKey: ["tps-saya-ringkas"],
-    queryFn: getTpsSaya,
-    enabled,
-  });
+  const stat = useStatistikSaya(enabled);
+  const jumlahNotifikasi = useJumlahNotifikasi(enabled);
+
   const artikelQ = useQuery({
-    queryKey: ["artikel-unggulan"],
-    queryFn: () => getArtikel({ unggulan: 1 }),
+    queryKey: ["artikel", "unggulan"],
+    queryFn: () => daftarArtikel({ unggulan: true, per_page: 3 }),
+    staleTime: 10 * 60_000,
   });
 
-  const asList = (d: any) => (Array.isArray(d) ? d : (d?.data ?? []));
-  const setoranList = asList(setoranQ.data);
-  const totalSetorKg = setoranList.reduce(
-    (n: number, s: any) =>
-      n + Number(s.berat ?? s.berat_kg ?? s.total_berat ?? 0),
-    0,
-  );
+  /**
+   * Statistik nasional untuk tamu maupun pengguna terdaftar.
+   *
+   * Peladen men-cache-nya 15 menit, jadi `staleTime` di sini mengikuti angka
+   * yang sama — memanggil lebih sering hanya menghabiskan kuota untuk jawaban
+   * yang identik.
+   */
+  const publikQ = useQuery({
+    queryKey: ["publik", "statistik"],
+    queryFn: statistikPublik,
+    staleTime: 15 * 60_000,
+  });
 
-  const saldo = saldoQ.data ?? Number(user?.saldo ?? 0);
   const stats: Stats = {
-    saldo,
-    totalSetorKg,
-    jumlahSetor: setoranList.length,
-    jumlahBelanja: pesananQ.data?.total ?? asList(pesananQ.data).length,
-    jumlahLaporan: laporanQ.data?.total ?? asList(laporanQ.data).length,
-    jumlahKlasifikasi: asList(klasQ.data).length,
-    jumlahTps: asList(tpsQ.data).length,
+    saldo: stat.saldo,
+    totalSetorKg: stat.totalSetorKg,
+    jumlahSetor: stat.jumlahSetor,
+    jumlahBelanja: stat.jumlahPesanan,
+    jumlahLaporan: stat.jumlahLaporan,
+    jumlahKlasifikasi: stat.jumlahKlasifikasi,
+    jumlahTps: 0,
   };
   const achievements = evaluate(stats);
-  const artikel = asList(artikelQ.data).slice(0, 3);
+  const artikel = artikelQ.data?.data ?? [];
+  const saldo = stat.saldo;
 
   /* ---------------- GUEST ---------------- */
   if (!user) {
@@ -154,7 +132,7 @@ export default function Beranda() {
               />
               <View>
                 <Text style={styles.hi}>Selamat Datang di</Text>
-                <Text style={styles.brand}>Niti Resik</Text>
+                <Text style={styles.brand}>Resikita</Text>
               </View>
             </View>
             <Pressable
@@ -224,47 +202,7 @@ export default function Beranda() {
             {artikel.length === 0 ? (
               <Text style={styles.emptyMini}>Belum ada artikel.</Text>
             ) : (
-              artikel.map((a: any) => {
-                const m = tipeMeta(a.tipe);
-                return (
-                  <Pressable
-                    key={a.id}
-                    style={styles.artikelCard}
-                    onPress={() => router.push(`/edukasi/${a.slug}`)}
-                  >
-                    <View style={styles.artikelThumb}>
-                      {a.thumbnail ? (
-                        <Image
-                          source={{ uri: a.thumbnail }}
-                          style={styles.artikelImg}
-                        />
-                      ) : (
-                        <Feather name="image" size={22} color="#CBD5E1" />
-                      )}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View
-                        style={[styles.artikelBadge, { backgroundColor: m.bg }]}
-                      >
-                        <Text style={styles.artikelBadgeText}>{m.label}</Text>
-                      </View>
-                      <Text style={styles.artikelTitle} numberOfLines={2}>
-                        {a.judul}
-                      </Text>
-                      <View style={styles.artikelMeta}>
-                        <Feather
-                          name="clock"
-                          size={12}
-                          color={colors.subtext}
-                        />
-                        <Text style={styles.artikelMetaText}>
-                          {a.waktu_baca} menit
-                        </Text>
-                      </View>
-                    </View>
-                  </Pressable>
-                );
-              })
+              artikel.map((a) => <KartuArtikel key={a.slug} a={a} />)
             )}
           </View>
 
@@ -276,7 +214,7 @@ export default function Beranda() {
               title="Bank Sampah Digital"
               desc="Tukar sampah jadi rupiah. Lingkungan bersih, dompet terisi!"
               cta="Mulai Sekarang"
-              onPress={() => router.push("/login" as any)}
+              onPress={() => router.push("/login")}
             />
             <PromoCard
               tinted
@@ -301,39 +239,26 @@ export default function Beranda() {
   }
 
   /* ---------------- AUTHED ---------------- */
-  // Bulatkan agar tidak muncul angka desimal panjang (mis. 44.6700000000000022)
-  const sampahKg = Math.round(totalSetorKg * 10) / 10; // 1 desimal, mis. 44.7
-  const co2Kg = Math.round(sampahKg * 3);
-  const pohon = Math.round(sampahKg / 7);
+  /*
+    Empat angka dihapus dari kartu ini: berat sampah, CO₂ tersimpan, setara
+    pohon, dan tren persen bulan ini vs bulan lalu.
 
-  // Trend (%) setoran bulan ini vs bulan lalu. Null bila tak ada pembanding → badge disembunyikan.
-  const trendPersen: number | null = (() => {
-    const now = new Date();
-    const parseTgl = (s: any) =>
-      new Date(s.tanggal ?? s.created_at ?? s.tgl ?? 0);
-    const beratOf = (s: any) =>
-      Number(s.berat ?? s.berat_kg ?? s.total_berat ?? 0);
-    const inBulan = (s: any, y: number, m: number) => {
-      const d = parseTgl(s);
-      return d.getFullYear() === y && d.getMonth() === m;
-    };
-    const kgIni = setoranList
-      .filter((s: any) => inBulan(s, now.getFullYear(), now.getMonth()))
-      .reduce((n: number, s: any) => n + beratOf(s), 0);
-    const lalu = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const kgLalu = setoranList
-      .filter((s: any) => inBulan(s, lalu.getFullYear(), lalu.getMonth()))
-      .reduce((n: number, s: any) => n + beratOf(s), 0);
-    if (kgLalu <= 0) return null; // hindari bagi nol & angka mengada-ada
-    return Math.round(((kgIni - kgLalu) / kgLalu) * 100);
-  })();
+    Keempatnya dihitung dari `GET /setoran` **halaman pertama saja** — pengguna
+    dengan 200 setoran melihat angka yang berasal dari 15 di antaranya. Salah,
+    tapi tampak presisi, dan itu gabungan terburuk. Tidak ada endpoint yang
+    mengembalikan akumulasi berat setoran (catatan T18); begitu peladen
+    menyediakannya, keempatnya bisa kembali dengan angka yang benar.
+
+    Yang menggantikan: jumlah setoran, laporan, dan sampah terpindai — semuanya
+    dari `meta.total`, yang memang jumlah sebenarnya di peladen.
+  */
 
   const aksi: Item[] = [
     {
       key: "bank",
       label: "Bank Sampah",
       icon: "refresh-ccw",
-      go: () => router.push("/dompet" as any),
+      go: () => router.push("/dompet"),
     },
     {
       key: "scan",
@@ -357,7 +282,7 @@ export default function Beranda() {
       key: "tarik",
       label: "Tarik Saldo",
       icon: "credit-card",
-      go: () => router.push("/dompet/tarik" as any),
+      go: () => router.push("/dompet/tarik"),
     },
     {
       key: "edukasi",
@@ -382,8 +307,29 @@ export default function Beranda() {
             </Text>
           </View>
           <Pressable
+            style={styles.lonceng}
+            onPress={() => router.push("/notifikasi" as Href)}
+            accessibilityRole="button"
+            accessibilityLabel={
+              jumlahNotifikasi > 0
+                ? `Notifikasi, ${jumlahNotifikasi} belum dibaca`
+                : "Notifikasi"
+            }
+          >
+            <Feather name="bell" size={22} color={colors.white} />
+            {jumlahNotifikasi > 0 && (
+              <View style={styles.lencana}>
+                <Text style={styles.lencanaTeks}>
+                  {jumlahNotifikasi > 99 ? "99+" : jumlahNotifikasi}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+          <Pressable
             style={styles.avatarInit}
             onPress={() => router.push("/profil")}
+            accessibilityRole="button"
+            accessibilityLabel="Buka profil saya"
           >
             <Text style={styles.avatarInitText}>{initials(user.name)}</Text>
           </Pressable>
@@ -393,39 +339,31 @@ export default function Beranda() {
         <View style={styles.saldoCard}>
           <View style={styles.saldoTop}>
             <Text style={styles.saldoLabel}>Total Saldo</Text>
-            {trendPersen != null && (
-              <View style={styles.trend}>
-                <Feather
-                  name={trendPersen >= 0 ? "trending-up" : "trending-down"}
-                  size={14}
-                  color={colors.white}
-                />
-                <Text style={styles.trendText}>
-                  {trendPersen >= 0 ? "+" : ""}
-                  {trendPersen}%
-                </Text>
-              </View>
-            )}
           </View>
           <Text
             style={styles.saldoValue}
             numberOfLines={1}
             adjustsFontSizeToFit
+            accessibilityLabel={`Total saldo Anda ${formatRupiah(saldo)}`}
           >
-            Rp {saldo.toLocaleString("id-ID")}
+            {stat.memuat ? "—" : formatRupiah(saldo)}
           </Text>
           <View style={styles.statsRow}>
             <Stat
-              icon="feather"
-              label="CO₂"
-              value={`${co2Kg.toLocaleString("id-ID")} kg`}
+              icon="package"
+              label="Setoran"
+              value={stat.memuat ? "—" : String(stat.jumlahSetor)}
             />
             <Stat
-              icon="trash-2"
-              label="Sampah"
-              value={`${sampahKg.toLocaleString("id-ID")} kg`}
+              icon="file-text"
+              label="Laporan"
+              value={stat.memuat ? "—" : String(stat.jumlahLaporan)}
             />
-            <Stat icon="feather" label="Pohon" value={`${pohon}`} />
+            <Stat
+              icon="camera"
+              label="Dipindai"
+              value={stat.memuat ? "—" : String(stat.jumlahKlasifikasi)}
+            />
           </View>
         </View>
 
@@ -476,7 +414,13 @@ export default function Beranda() {
                 ]}
               >
                 <Feather
-                  name={(a.done ? a.icon : "lock") as any}
+                  name={
+                    a.done === true
+                      ? (a.icon as keyof typeof Feather.glyphMap)
+                      : a.done === false
+                        ? "lock"
+                        : "help-circle"
+                  }
                   size={22}
                   color={a.done ? colors.brand : "#94A3B8"}
                 />
@@ -514,43 +458,7 @@ export default function Beranda() {
           {artikel.length === 0 ? (
             <Text style={styles.emptyMini}>Belum ada artikel.</Text>
           ) : (
-            artikel.map((a: any) => {
-              const m = tipeMeta(a.tipe);
-              return (
-                <Pressable
-                  key={a.id}
-                  style={styles.artikelCard}
-                  onPress={() => router.push(`/edukasi/${a.slug}`)}
-                >
-                  <View style={styles.artikelThumb}>
-                    {a.thumbnail ? (
-                      <Image
-                        source={{ uri: a.thumbnail }}
-                        style={styles.artikelImg}
-                      />
-                    ) : (
-                      <Feather name="image" size={22} color="#CBD5E1" />
-                    )}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <View
-                      style={[styles.artikelBadge, { backgroundColor: m.bg }]}
-                    >
-                      <Text style={styles.artikelBadgeText}>{m.label}</Text>
-                    </View>
-                    <Text style={styles.artikelTitle} numberOfLines={2}>
-                      {a.judul}
-                    </Text>
-                    <View style={styles.artikelMeta}>
-                      <Feather name="clock" size={12} color={colors.subtext} />
-                      <Text style={styles.artikelMetaText}>
-                        {a.waktu_baca} menit
-                      </Text>
-                    </View>
-                  </View>
-                </Pressable>
-              );
-            })
+            artikel.map((a) => <KartuArtikel key={a.slug} a={a} />)
           )}
         </View>
 
@@ -562,7 +470,7 @@ export default function Beranda() {
             title="Bank Sampah Digital"
             desc="Tukar sampah jadi rupiah. Lingkungan bersih, dompet terisi!"
             cta="Mulai Sekarang"
-            onPress={() => router.push("/dompet" as any)}
+            onPress={() => router.push("/dompet")}
           />
           <PromoCard
             tinted
@@ -639,7 +547,7 @@ function PromoCard({
   tinted,
   outline,
 }: {
-  icon: any;
+  icon: keyof typeof Feather.glyphMap;
   title: string;
   desc: string;
   cta: string;
@@ -695,6 +603,60 @@ function PromoCard({
 }
 
 const styles = StyleSheet.create({
+  petugasKartu: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#0F766E",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    minHeight: 44,
+  },
+  petugasIkon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  petugasJudul: { fontSize: 16, fontWeight: "800", color: "#FFFFFF" },
+  petugasSub: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.78)",
+    marginTop: 3,
+    lineHeight: 17,
+  },
+  petugasLencana: {
+    minWidth: 26,
+    height: 26,
+    borderRadius: 13,
+    paddingHorizontal: 7,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  petugasLencanaTeks: { color: "#0F766E", fontSize: 12, fontWeight: "800" },
+  lonceng: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lencana: {
+    position: "absolute",
+    top: 4,
+    right: 2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: colors.danger,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lencanaTeks: { color: colors.white, fontSize: 10, fontWeight: "700" },
   logo: { width: 34, height: 34 },
   screen: { flex: 1, backgroundColor: colors.bg },
   header: {
@@ -883,47 +845,8 @@ const styles = StyleSheet.create({
   },
   badgeText: { fontSize: 12, fontWeight: "600", textAlign: "center" },
   emptyMini: { color: colors.subtext, fontSize: 13, paddingVertical: 8 },
-  artikelCard: {
-    flexDirection: "row",
-    gap: 12,
-    backgroundColor: colors.white,
-    borderRadius: radius.md,
-    padding: 10,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#EEF2F6",
-  },
-  artikelThumb: {
-    width: 76,
-    height: 76,
-    borderRadius: 10,
-    backgroundColor: "#F1F5F9",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  artikelImg: { width: "100%", height: "100%" },
-  artikelBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.pill,
-    marginBottom: 4,
-  },
-  artikelBadgeText: { color: "#fff", fontSize: 10, fontWeight: "700" },
-  artikelTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.text,
-    lineHeight: 19,
-  },
-  artikelMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 6,
-  },
-  artikelMetaText: { fontSize: 12, color: colors.subtext },
+  // Rupa kartu artikel pindah ke `components/KartuArtikel.tsx` supaya beranda
+  // tamu dan beranda pengguna terdaftar tidak bisa lagi berbeda isinya.
   promo: { borderRadius: radius.lg, padding: spacing.lg, marginBottom: 14 },
   promoOutline: { borderWidth: 1, borderColor: colors.border },
   promoIcon: {

@@ -1,6 +1,3 @@
-import { Button, Card, Field } from "@/components/ui";
-import { colors, spacing } from "@/constants/theme";
-import { useAuth } from "@/context/AuthContext";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -16,26 +13,36 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Button, Card, Field, PesanGalat } from "@/components/ui";
+import { colors, spacing } from "@/constants/theme";
+import { useAuth } from "@/context/AuthContext";
+import { useGalatForm } from "@/hooks/useGalatForm";
+
 export default function Login() {
-  const { login } = useAuth();
-  const [nik, setNik] = useState("");
+  const { masuk } = useAuth();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const galat = useGalatForm();
 
   const submit = async () => {
-    setError("");
-    if (nik.length < 3 || !password) {
-      setError("NIK dan password wajib diisi.");
-      return;
-    }
+    galat.bersihkan();
+
+    // Validasi sisi klien pun ditempelkan ke fieldnya, bukan ditumpuk jadi satu
+    // kalimat di atas tombol: pengguna melihat langsung baris mana yang kurang.
+    if (!email.trim()) return galat.tandai("email", "Email wajib diisi.");
+    if (!password) return galat.tandai("password", "Kata sandi wajib diisi.");
+
     setLoading(true);
     try {
-      await login(nik.trim(), password);
-      router.replace("/beranda");
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? "Gagal masuk. Coba lagi.");
+      await masuk(email, password);
+      router.replace("/");
+    } catch (e) {
+      // `401` di layar ini berarti kredensial salah, bukan sesi habis — peladen
+      // sengaja tidak membedakan email tak terdaftar dari kata sandi keliru,
+      // jadi pesannya memang tidak bisa menunjuk satu field.
+      galat.tangani(e, "Gagal masuk. Periksa koneksi Anda lalu coba lagi.");
     } finally {
       setLoading(false);
     }
@@ -55,6 +62,8 @@ export default function Login() {
             style={styles.back}
             onPress={() => router.back()}
             hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Kembali"
           >
             <Feather name="arrow-left" size={24} color={colors.white} />
           </Pressable>
@@ -65,9 +74,10 @@ export default function Login() {
                 source={require("@/assets/images/logo-primary.png")}
                 style={styles.logoImg}
                 resizeMode="contain"
+                accessibilityIgnoresInvertColors
               />
             </View>
-            <Text style={styles.brand}>Niti Resik</Text>
+            <Text style={styles.brand}>Resikita</Text>
             <Text style={styles.tag}>Bersama Wujudkan Bumi Bersih</Text>
           </View>
 
@@ -77,34 +87,49 @@ export default function Login() {
               Masuk untuk melanjutkan perjalanan
             </Text>
 
+            <PesanGalat pesan={galat.umum} />
+
             <Field
-              label="Nomor Induk Kependudukan (NIK)"
-              icon="credit-card"
-              placeholder="Masukkan 16 digit NIK"
-              keyboardType="number-pad"
-              value={nik}
-              onChangeText={setNik}
-              maxLength={16}
+              label="Email"
+              icon="mail"
+              placeholder="nama@email.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
+              value={email}
+              onChangeText={setEmail}
+              error={galat.field.email}
+              accessibilityLabel="Alamat email"
             />
             <Field
-              label="Password"
+              label="Kata Sandi"
               icon="lock"
-              placeholder="Masukkan password"
+              placeholder="Masukkan kata sandi"
               secureTextEntry={!show}
+              autoComplete="current-password"
+              textContentType="password"
               value={password}
               onChangeText={setPassword}
               rightIcon={show ? "eye-off" : "eye"}
               onRightPress={() => setShow(!show)}
+              error={galat.field.password}
+              accessibilityLabel="Kata sandi"
             />
 
-            <Text style={styles.forgot}>Lupa Password?</Text>
-            {!!error && <Text style={styles.error}>{error}</Text>}
+            <Pressable
+              onPress={() => router.push("/lupa-password")}
+              accessibilityRole="button"
+              accessibilityLabel="Lupa kata sandi"
+              style={styles.forgotWrap}
+            >
+              <Text style={styles.forgot}>Lupa Kata Sandi?</Text>
+            </Pressable>
 
             <Button
               label="Masuk"
               onPress={submit}
               loading={loading}
-              disabled={!nik || !password}
               style={{ marginTop: 6 }}
             />
 
@@ -116,7 +141,11 @@ export default function Login() {
 
             <View style={styles.rowCenter}>
               <Text style={styles.muted}>Belum punya akun? </Text>
-              <Pressable onPress={() => router.replace("/register")}>
+              <Pressable
+                onPress={() => router.replace("/register")}
+                accessibilityRole="button"
+                accessibilityLabel="Daftar akun baru"
+              >
                 <Text style={styles.link}>Daftar Sekarang</Text>
               </Pressable>
             </View>
@@ -139,10 +168,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  logoImg: {
-    width: 46,
-    height: 46,
-  },
+  logoImg: { width: 46, height: 46 },
   brand: {
     color: colors.white,
     fontSize: 26,
@@ -164,18 +190,10 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 20,
   },
-  forgot: {
-    color: colors.link,
-    fontWeight: "600",
-    textAlign: "right",
-    marginBottom: 14,
-  },
-  error: {
-    color: colors.danger,
-    fontSize: 13,
-    marginBottom: 10,
-    textAlign: "center",
-  },
+  // Dibungkus Pressable dengan tinggi minimum supaya tautan ini memenuhi
+  // target sentuh 44 piksel, bukan sekadar teks setinggi barisnya.
+  forgotWrap: { alignSelf: "flex-end", minHeight: 44, justifyContent: "center" },
+  forgot: { color: colors.link, fontWeight: "600" },
   divider: { flexDirection: "row", alignItems: "center", marginVertical: 18 },
   line: { flex: 1, height: 1, backgroundColor: colors.border },
   or: { marginHorizontal: 10, color: colors.subtext, fontSize: 12 },

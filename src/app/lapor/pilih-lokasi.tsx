@@ -1,6 +1,7 @@
 import LeafletMap, { LeafletMapHandle } from "@/components/LeafletMap";
 import { colors, radius, spacing } from "@/constants/theme";
 import { locationDraft } from "@/lib/draft";
+import { alamatDariKoordinat } from "@/lib/geo";
 import { Feather } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router } from "expo-router";
@@ -42,18 +43,7 @@ export default function PilihLokasi() {
   const reverse = async (coord: { lat: number; lng: number }) => {
     setLoadingGeo(true);
     try {
-      const geo = await Location.reverseGeocodeAsync({
-        latitude: coord.lat,
-        longitude: coord.lng,
-      });
-      const a = geo[0];
-      if (a)
-        setAlamat(
-          `${a.street ?? a.name ?? ""} ${a.streetNumber ?? ""}, ${a.subregion ?? a.city ?? ""}`
-            .replace(/\s+/g, " ")
-            .trim(),
-        );
-    } catch {
+      setAlamat(await alamatDariKoordinat(coord.lat, coord.lng));
     } finally {
       setLoadingGeo(false);
     }

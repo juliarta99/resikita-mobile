@@ -1,24 +1,25 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { View } from "react-native";
-import { buildLeafletHtml, LeafletMarker } from "@/lib/leafletHtml";
+import { buildLeafletHtml } from "@/lib/leafletHtml";
+import type {
+  LeafletMapHandle,
+  LeafletMapProps,
+  LeafletMarker,
+} from "@/types/peta";
 
-export type LeafletMapHandle = { setView: (lat: number, lng: number, zoom?: number) => void };
-export type LeafletMapProps = {
-  center: { lat: number; lng: number };
-  zoom?: number;
-  markers?: LeafletMarker[];
-  pick?: boolean;
-  onMarkerPress?: (id: string | number) => void;
-  onMapPress?: (lat: number, lng: number) => void;
-  style?: any;
-};
+/** Perintah yang dikirim ke halaman peta di dalam WebView. */
+type PerintahPeta =
+  | { cmd: "setView"; lat: number; lng: number; zoom?: number }
+  | { cmd: "markers"; list: LeafletMarker[] };
+
+export type { LeafletMapHandle, LeafletMapProps };
 
 const LeafletMap = forwardRef<LeafletMapHandle, LeafletMapProps>(function LeafletMapWeb(props, ref) {
-  const iframeRef = useRef<any>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const ready = useRef(false);
   const html = useRef(buildLeafletHtml({ center: props.center, zoom: props.zoom, pick: props.pick, markers: props.markers })).current;
 
-  const post = (obj: any) => iframeRef.current?.contentWindow?.postMessage(JSON.stringify(obj), "*");
+  const post = (obj: PerintahPeta) => iframeRef.current?.contentWindow?.postMessage(JSON.stringify(obj), "*");
 
   useImperativeHandle(ref, () => ({ setView: (lat, lng, zoom) => post({ cmd: "setView", lat, lng, zoom }) }));
 
@@ -29,6 +30,11 @@ const LeafletMap = forwardRef<LeafletMapHandle, LeafletMapProps>(function Leafle
         if (d.type === "ready") { ready.current = true; post({ cmd: "markers", list: props.markers ?? [] }); }
         else if (d.type === "marker") props.onMarkerPress?.(d.id);
         else if (d.type === "press") props.onMapPress?.(d.lat, d.lng);
+        // Tautan atribusi OpenStreetMap. Dibuka di tab baru, bukan di dalam
+        // iframe peta yang tidak punya kendali navigasi.
+        else if (d.type === "link" && typeof d.url === "string") {
+          window.open(d.url, "_blank", "noopener");
+        }
       } catch {}
     };
     window.addEventListener("message", onMsg);

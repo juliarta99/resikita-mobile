@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -58,7 +59,7 @@ export default function Kamera() {
     if (!perm.granted) return;
     const res = await ImagePicker.launchImageLibraryAsync({
       quality: 0.6,
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
     });
     if (!res.canceled && res.assets[0]) {
       fotoSementara.set(res.assets[0].uri);
@@ -112,7 +113,7 @@ export default function Kamera() {
 }
 
 function Corner({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
-  const m: any = {
+  const m: Record<typeof pos, ViewStyle> = {
     tl: {
       top: -2,
       left: -2,

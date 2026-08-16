@@ -1,24 +1,26 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { Linking } from "react-native";
 import { WebView } from "react-native-webview";
-import { buildLeafletHtml, LeafletMarker } from "@/lib/leafletHtml";
+import { buildLeafletHtml } from "@/lib/leafletHtml";
+import type {
+  LeafletMapHandle,
+  LeafletMapProps,
+  LeafletMarker,
+} from "@/types/peta";
 
-export type LeafletMapHandle = { setView: (lat: number, lng: number, zoom?: number) => void };
-export type LeafletMapProps = {
-  center: { lat: number; lng: number };
-  zoom?: number;
-  markers?: LeafletMarker[];
-  pick?: boolean;
-  onMarkerPress?: (id: string | number) => void;
-  onMapPress?: (lat: number, lng: number) => void;
-  style?: any;
-};
+/** Perintah yang dikirim ke halaman peta di dalam WebView. */
+type PerintahPeta =
+  | { cmd: "setView"; lat: number; lng: number; zoom?: number }
+  | { cmd: "markers"; list: LeafletMarker[] };
+
+export type { LeafletMapHandle, LeafletMapProps };
 
 const LeafletMap = forwardRef<LeafletMapHandle, LeafletMapProps>(function LeafletMapNative(props, ref) {
   const webRef = useRef<WebView>(null);
   const ready = useRef(false);
   const html = useRef(buildLeafletHtml({ center: props.center, zoom: props.zoom, pick: props.pick, markers: props.markers })).current;
 
-  const post = (obj: any) => {
+  const post = (obj: PerintahPeta) => {
     const js = `window.__handle(${JSON.stringify(JSON.stringify(obj))}); true;`;
     webRef.current?.injectJavaScript(js);
   };
@@ -28,7 +30,7 @@ const LeafletMap = forwardRef<LeafletMapHandle, LeafletMapProps>(function Leafle
   useEffect(() => { if (ready.current) post({ cmd: "markers", list: props.markers ?? [] }); }, [props.markers]);
   useEffect(() => { if (ready.current) post({ cmd: "setView", lat: props.center.lat, lng: props.center.lng, zoom: props.zoom }); }, [props.center?.lat, props.center?.lng]);
 
-  const onMessage = (e: any) => {
+  const onMessage = (e: { nativeEvent: { data: string } }) => {
     try {
       const d = JSON.parse(e.nativeEvent.data);
       if (d.type === "ready") {
@@ -36,6 +38,11 @@ const LeafletMap = forwardRef<LeafletMapHandle, LeafletMapProps>(function Leafle
         post({ cmd: "markers", list: props.markers ?? [] });
       } else if (d.type === "marker") props.onMarkerPress?.(d.id);
       else if (d.type === "press") props.onMapPress?.(d.lat, d.lng);
+      // Tautan atribusi OpenStreetMap. Dibuka di peramban sistem, bukan di
+      // dalam WebView, supaya petanya tidak tertimpa halaman hak cipta.
+      else if (d.type === "link" && typeof d.url === "string") {
+        void Linking.openURL(d.url);
+      }
     } catch {}
   };
 

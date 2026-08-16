@@ -28,7 +28,7 @@ export default function Tentang() {
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text style={styles.appName}>Niti Resik</Text>
+        <Text style={styles.appName}>Resikita</Text>
         <Text style={styles.tagline}>Bersama Wujudkan Bumi Bersih</Text>
         <Text style={styles.ver}>Versi 1.0.0</Text>
       </View>
@@ -39,15 +39,16 @@ export default function Tentang() {
         <View style={styles.card}>
           <Text style={styles.title}>Tentang Kami</Text>
           <Text style={styles.p}>
-            Niti Resik adalah platform ekonomi sirkular yang menghubungkan warga
-            Kabupaten Badung dengan ekosistem pengelolaan sampah berkelanjutan.
-            Kami percaya sampah bukan sekadar masalah, melainkan peluang untuk
-            menciptakan nilai ekonomi sekaligus menjaga lingkungan.
+            Resikita adalah platform ekonomi sirkular yang menghubungkan warga
+            di seluruh Indonesia dengan ekosistem pengelolaan sampah
+            berkelanjutan. Kami percaya sampah bukan sekadar masalah, melainkan
+            peluang untuk menciptakan nilai ekonomi sekaligus menjaga
+            lingkungan.
           </Text>
           <Text style={styles.p}>
             Dengan dukungan teknologi AI dan jaringan Bank Sampah, kami membantu
-            mengubah kebiasaan memilah sampah menjadi kontribusi nyata bagi Bali
-            yang lebih bersih dan hijau.
+            mengubah kebiasaan memilah sampah menjadi kontribusi nyata bagi
+            lingkungan yang lebih bersih dan hijau — dari desa hingga kota.
           </Text>
         </View>
 
@@ -55,8 +56,8 @@ export default function Tentang() {
           <Text style={styles.title}>Visi & Misi</Text>
           <Text style={styles.sub}>Visi</Text>
           <Text style={styles.p}>
-            Mewujudkan Badung bersih sampah yang selaras dengan filosofi Tri
-            Hita Karana — harmoni antara manusia, alam, dan Tuhan.
+            Mewujudkan Indonesia bersih sampah melalui pengelolaan yang
+            partisipatif, transparan, dan dapat diakses siapa pun.
           </Text>
           <Text style={styles.sub}>Misi</Text>
           <Text style={styles.li}>
@@ -69,13 +70,16 @@ export default function Tentang() {
             • Mempermudah pelaporan dan pemantauan sampah lewat teknologi.
           </Text>
           <Text style={styles.li}>
-            • Menumbuhkan kesadaran lingkungan berbasis budaya lokal Bali.
+            • Menumbuhkan kesadaran lingkungan yang berakar pada kearifan lokal
+            masing-masing daerah.
+          </Text>
+          <Text style={styles.li}>
+            • Memastikan layanan tetap terjangkau lewat suara, bagi warga yang
+            kesulitan membaca atau mengetik.
           </Text>
         </View>
 
-        <Text style={styles.footer}>
-          © 2026 Niti Resik — Kabupaten Badung, Bali
-        </Text>
+        <Text style={styles.footer}>© 2026 Resikita</Text>
       </ScrollView>
     </SafeAreaView>
   );

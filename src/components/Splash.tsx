@@ -9,7 +9,7 @@ export default function Splash() {
         style={styles.logo}
         resizeMode="contain"
       />
-      <Text style={styles.title}>Niti Resik</Text>
+      <Text style={styles.title}>Resikita</Text>
       <Text style={styles.sub}>Bersama Wujudkan Bumi Bersih</Text>
     </View>
   );

@@ -1,8 +1,4 @@
-import { Button, Card, Field } from "@/components/ui";
-import { colors, radius, spacing } from "@/constants/theme";
-import { useAuth } from "@/context/AuthContext";
 import { Feather } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -17,57 +13,74 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Button, Card, Field, PesanGalat } from "@/components/ui";
+import { WilayahPicker } from "@/components/WilayahPicker";
+import { colors, radius, spacing } from "@/constants/theme";
+import { useAuth } from "@/context/AuthContext";
+import { useGalatForm } from "@/hooks/useGalatForm";
+import { useWilayah } from "@/hooks/useWilayah";
+
+const PANJANG_SANDI_MINIMUM = 8;
+
+/**
+ * Nama field peladen yang di layar ini punya nama berbeda.
+ *
+ * Peladen melaporkan ketidakcocokan konfirmasi pada field `password`, sementara
+ * yang salah ketik hampir selalu barisnya konfirmasi. Tanpa pemetaan ini pesan
+ * "Konfirmasi kata sandi tidak cocok" menempel di baris kata sandi — persis
+ * baris yang sebenarnya sudah benar.
+ */
+const PETA_FIELD = { password_confirmation: "konfirmasi" };
+
 export default function Register() {
-  const { register } = useAuth();
-  const [nik, setNik] = useState("");
+  const { daftar } = useAuth();
+  const wilayah = useWilayah();
+  const galat = useGalatForm();
+
   const [name, setName] = useState("");
-  const [tgl, setTgl] = useState<Date | null>(null);
-  const [showDate, setShowDate] = useState(false);
-  const [jk, setJk] = useState<"L" | "P" | null>(null);
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [konfirmasi, setKonfirmasi] = useState("");
   const [show, setShow] = useState(false);
+  const [isiWilayah, setIsiWilayah] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
   const submit = async () => {
-    setError("");
-    if (nik.length !== 16) return setError("NIK harus 16 digit.");
-    if (!name.trim()) return setError("Nama lengkap wajib diisi.");
-    if (!tgl) return setError("Tanggal lahir wajib diisi.");
-    if (!jk) return setError("Jenis kelamin wajib dipilih.");
-    if (!phone.trim()) return setError("Nomor handphone wajib diisi.");
-    if (password.length < 8) return setError("Password minimal 8 karakter.");
+    galat.bersihkan();
+
+    if (!name.trim()) return galat.tandai("name", "Nama lengkap wajib diisi.");
+    if (!email.trim()) return galat.tandai("email", "Email wajib diisi.");
+    if (password.length < PANJANG_SANDI_MINIMUM)
+      return galat.tandai(
+        "password",
+        `Kata sandi minimal ${PANJANG_SANDI_MINIMUM} karakter.`,
+      );
     if (password !== konfirmasi)
-      return setError("Konfirmasi password tidak cocok.");
+      return galat.tandai("konfirmasi", "Konfirmasi kata sandi tidak cocok.");
 
     setLoading(true);
     try {
-      const res = await register({
+      await daftar({
         name: name.trim(),
-        nik,
-        tanggal_lahir: fmt(tgl),
-        jenis_kelamin: jk,
-        phone: phone.trim(),
+        email: email.trim(),
         password,
+        password_confirmation: konfirmasi,
+        // Keduanya opsional di kontrak. Mengirim string kosong berbeda dari
+        // tidak mengirim sama sekali — peladen akan memvalidasi nilai kosong
+        // itu dan menolaknya.
+        ...(phone.trim() ? { phone: phone.trim() } : {}),
+        ...(wilayah.wilayahId ? { wilayah_id: wilayah.wilayahId } : {}),
       });
-      router.replace({
-        pathname: "/verify-otp",
-        params: { phone: res.data.phone, dev_kode: res.data.dev_kode ?? "" },
-      });
-    } catch (e: any) {
-      const errs = e?.response?.data?.errors as
-        | Record<string, string[]>
-        | undefined;
-      setError(
-        errs
-          ? Object.values(errs)[0]?.[0]
-          : (e?.response?.data?.message ?? "Registrasi gagal."),
+      router.replace("/verify-otp");
+    } catch (e) {
+      const terpasang = galat.tangani(
+        e,
+        "Pendaftaran gagal. Periksa koneksi Anda lalu coba lagi.",
+        PETA_FIELD,
       );
+      // Galat wilayah tidak akan terlihat selama bagian yang melipatnya tertutup.
+      if (terpasang.wilayah_id) setIsiWilayah(true);
     } finally {
       setLoading(false);
     }
@@ -87,6 +100,8 @@ export default function Register() {
             style={styles.back}
             onPress={() => router.back()}
             hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Kembali"
           >
             <Feather name="arrow-left" size={24} color={colors.white} />
           </Pressable>
@@ -97,114 +112,118 @@ export default function Register() {
                 source={require("@/assets/images/logo-primary.png")}
                 style={styles.logoImg}
                 resizeMode="contain"
+                accessibilityIgnoresInvertColors
               />
             </View>
-            <Text style={styles.brand}>Bergabung dengan Niti Resik</Text>
+            <Text style={styles.brand}>Bergabung dengan Resikita</Text>
             <Text style={styles.tag}>Mulai perjalanan hijau Anda hari ini</Text>
           </View>
 
           <Card style={styles.card}>
-            <Field
-              label="NIK"
-              required
-              icon="credit-card"
-              placeholder="16 digit NIK"
-              keyboardType="number-pad"
-              maxLength={16}
-              value={nik}
-              onChangeText={setNik}
-            />
+            <PesanGalat pesan={galat.umum} />
+
             <Field
               label="Nama Lengkap"
               required
               icon="user"
               placeholder="Masukkan nama lengkap"
+              autoComplete="name"
               value={name}
               onChangeText={setName}
+              error={galat.field.name}
+              accessibilityLabel="Nama lengkap"
             />
-
-            <Text style={styles.label}>
-              Tanggal Lahir <Text style={{ color: colors.danger }}>*</Text>
-            </Text>
-            <Pressable style={styles.dateBox} onPress={() => setShowDate(true)}>
-              <Feather
-                name="calendar"
-                size={18}
-                color={colors.subtext}
-                style={{ marginRight: 8 }}
-              />
-              <Text
-                style={{ color: tgl ? colors.text : "#9AA5B1", fontSize: 15 }}
-              >
-                {tgl ? fmt(tgl) : "Pilih tanggal"}
-              </Text>
-            </Pressable>
-            {showDate && (
-              <DateTimePicker
-                value={tgl ?? new Date(2000, 0, 1)}
-                mode="date"
-                maximumDate={new Date()}
-                onChange={(_, d) => {
-                  setShowDate(Platform.OS === "ios");
-                  if (d) setTgl(d);
-                }}
-              />
-            )}
-
-            <Text style={[styles.label, { marginTop: spacing.md }]}>
-              Jenis Kelamin <Text style={{ color: colors.danger }}>*</Text>
-            </Text>
-            <View style={styles.jkRow}>
-              {(["L", "P"] as const).map((v) => (
-                <Pressable
-                  key={v}
-                  onPress={() => setJk(v)}
-                  style={[styles.jkBtn, jk === v && styles.jkActive]}
-                >
-                  <Text
-                    style={[
-                      styles.jkText,
-                      jk === v && { color: colors.brand, fontWeight: "700" },
-                    ]}
-                  >
-                    {v === "L" ? "Laki-laki" : "Perempuan"}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <View style={{ height: spacing.md }} />
             <Field
-              label="Nomor Handphone"
+              label="Email"
               required
+              icon="mail"
+              placeholder="nama@email.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
+              value={email}
+              onChangeText={setEmail}
+              error={galat.field.email}
+              accessibilityLabel="Alamat email"
+            />
+            <Field
+              label="Nomor WhatsApp"
               icon="phone"
-              placeholder="08xxxxxxxxxx"
+              placeholder="08xxxxxxxxxx (opsional)"
               keyboardType="phone-pad"
+              autoComplete="tel"
               value={phone}
               onChangeText={setPhone}
+              error={galat.field.phone}
+              hint="Hanya dipakai untuk mengirim notifikasi. Boleh dikosongkan."
+              accessibilityLabel="Nomor WhatsApp, opsional"
             />
+
             <Field
-              label="Password"
+              label="Kata Sandi"
               required
               icon="lock"
-              placeholder="Minimal 8 karakter"
+              placeholder={`Minimal ${PANJANG_SANDI_MINIMUM} karakter`}
               secureTextEntry={!show}
+              autoComplete="new-password"
+              textContentType="newPassword"
               value={password}
               onChangeText={setPassword}
               rightIcon={show ? "eye-off" : "eye"}
               onRightPress={() => setShow(!show)}
+              error={galat.field.password}
+              accessibilityLabel="Kata sandi"
             />
             <Field
-              label="Konfirmasi Password"
+              label="Konfirmasi Kata Sandi"
               required
               icon="lock"
-              placeholder="Ulangi password"
+              placeholder="Ulangi kata sandi"
               secureTextEntry={!show}
+              autoComplete="new-password"
               value={konfirmasi}
               onChangeText={setKonfirmasi}
+              error={galat.field.konfirmasi}
+              accessibilityLabel="Konfirmasi kata sandi"
             />
 
-            {!!error && <Text style={styles.error}>{error}</Text>}
+            {/*
+              Wilayah opsional dan terlipat secara bawaan. Ia menajamkan jawaban
+              chatbot dan menentukan fasilitas mana yang ditampilkan, tapi
+              menjadikannya syarat berarti empat pilihan lagi sebelum seseorang
+              bisa memakai aplikasinya sama sekali.
+            */}
+            <Pressable
+              style={styles.wilayahToggle}
+              onPress={() => setIsiWilayah((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel="Isi domisili sekarang"
+              accessibilityState={{ expanded: isiWilayah }}
+            >
+              <Feather name="map-pin" size={16} color={colors.brand} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.wilayahJudul}>Domisili (opsional)</Text>
+                <Text style={styles.wilayahSub}>
+                  Membantu kami menampilkan fasilitas terdekat. Bisa diisi nanti
+                  di profil.
+                </Text>
+              </View>
+              <Feather
+                name={isiWilayah ? "chevron-up" : "chevron-down"}
+                size={18}
+                color={colors.subtext}
+              />
+            </Pressable>
+
+            {isiWilayah && (
+              <View style={{ marginTop: spacing.md }}>
+                <WilayahPicker
+                  wilayah={wilayah}
+                  error={galat.field.wilayah_id}
+                />
+              </View>
+            )}
 
             <Button
               label="Daftar Sekarang"
@@ -215,7 +234,11 @@ export default function Register() {
 
             <View style={styles.rowCenter}>
               <Text style={styles.muted}>Sudah punya akun? </Text>
-              <Pressable onPress={() => router.replace("/login")}>
+              <Pressable
+                onPress={() => router.replace("/login")}
+                accessibilityRole="button"
+                accessibilityLabel="Masuk ke akun yang sudah ada"
+              >
                 <Text style={styles.link}>Masuk</Text>
               </Pressable>
             </View>
@@ -244,11 +267,6 @@ export default function Register() {
 }
 
 const styles = StyleSheet.create({
-  termsLink: {
-    color: colors.white,
-    fontWeight: "700",
-    textDecorationLine: "underline",
-  },
   screen: { flex: 1, backgroundColor: colors.bg },
   back: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   header: { alignItems: "center", marginTop: 8, marginBottom: 16 },
@@ -260,10 +278,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  logoImg: {
-    width: 46,
-    height: 46,
-  },
+  logoImg: { width: 46, height: 46 },
   brand: {
     color: colors.white,
     fontSize: 22,
@@ -273,38 +288,25 @@ const styles = StyleSheet.create({
   },
   tag: { color: colors.white70, fontSize: 13, marginTop: 4 },
   card: { marginHorizontal: spacing.lg, marginTop: 4 },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: 6,
-  },
-  dateBox: {
+  wilayahToggle: {
     flexDirection: "row",
     alignItems: "center",
-    height: 52,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
+    gap: 10,
+    minHeight: 44,
+    paddingVertical: 12,
     paddingHorizontal: 14,
-  },
-  jkRow: { flexDirection: "row", gap: 12 },
-  jkBtn: {
-    flex: 1,
-    height: 48,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: "#F8FAFC",
+    marginBottom: spacing.sm,
   },
-  jkActive: { borderColor: colors.brand, backgroundColor: "#EAF7F1" },
-  jkText: { color: colors.text, fontSize: 14 },
-  error: {
-    color: colors.danger,
-    fontSize: 13,
-    marginBottom: 10,
-    textAlign: "center",
+  wilayahJudul: { fontSize: 14, fontWeight: "600", color: colors.text },
+  wilayahSub: {
+    fontSize: 12,
+    color: colors.subtext,
+    marginTop: 2,
+    lineHeight: 17,
   },
   rowCenter: {
     flexDirection: "row",
@@ -321,5 +323,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginHorizontal: 40,
     lineHeight: 16,
+  },
+  termsLink: {
+    color: colors.white,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
 });

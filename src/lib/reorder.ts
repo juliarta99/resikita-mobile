@@ -1,35 +1,45 @@
-import { getProdukDetail } from "@/lib/api";
-import { cart } from "@/lib/cart";
+import { kosongkanKeranjang, tambahKeKeranjang } from "@/lib/api/produk";
+import type { ItemPesanan } from "@/types/pesanan";
 
-/** Tambahkan ulang item pesanan ke keranjang (ambil data produk terkini). Return jumlah yang berhasil ditambah. */
+export type HasilReorder = {
+  ditambah: number;
+  dilewati: number;
+};
+
+/**
+ * Isi ulang keranjang dari sebuah pesanan lama.
+ *
+ * Keranjang dikosongkan lebih dulu supaya isinya persis pesanan yang diulang,
+ * bukan campuran dengan apa pun yang tertinggal dari sesi belanja sebelumnya.
+ * Pengosongannya satu permintaan (`DELETE /keranjang`), bukan menghapus baris
+ * satu per satu — versi sebelumnya melakukan itu dan mengirim sebanyak jumlah
+ * item, masing-masing dengan kunci yang keliru pula.
+ *
+ * Kuantitas dikirim apa adanya. Stok dan harga terkini adalah urusan peladen;
+ * item yang tidak lagi tersedia akan ditolak dan dihitung sebagai `dilewati`,
+ * sehingga pemanggil bisa memberi tahu pengguna berapa yang tidak bisa dibawa
+ * kembali.
+ */
 export async function reorderItems(
-  items: { product_id?: number; qty: number }[],
-): Promise<number> {
+  items: ItemPesanan[],
+): Promise<HasilReorder> {
+  await kosongkanKeranjang();
+
   let ditambah = 0;
-  let pertama = true;
-  for (const it of items ?? []) {
-    if (!it.product_id) continue;
+  let dilewati = 0;
+
+  for (const it of items) {
     try {
-      const p = await getProdukDetail(it.product_id);
-      if (!p || p.stok <= 0) continue;
-      const ci = {
-        product_id: p.id,
-        nama: p.nama,
-        harga: p.harga,
-        gambar: p.gambar?.[0] ?? null,
-        umkm_id: p.umkm?.id,
-        umkm: p.umkm?.nama,
-        stok: p.stok,
-      };
-      const qty = Math.min(it.qty, p.stok);
-      if (pertama) {
-        cart.replaceWith(ci, qty);
-        pertama = false;
-      } else {
-        cart.add(ci, qty);
-      }
+      // `produk_id` ada langsung di baris pesanan sebagai snapshot; relasi
+      // `produk` hanya dimuat pada endpoint detail dan tidak selalu ada.
+      await tambahKeKeranjang({ produk_id: it.produk_id, qty: it.qty });
       ditambah++;
-    } catch {}
+    } catch {
+      // Produk sudah tidak dijual, stoknya habis, atau tokonya nonaktif.
+      // Bukan alasan menghentikan sisa item — pengguna diberi tahu jumlahnya.
+      dilewati++;
+    }
   }
-  return ditambah;
+
+  return { ditambah, dilewati };
 }

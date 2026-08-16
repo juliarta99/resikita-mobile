@@ -1,248 +1,237 @@
-import { colors, radius, spacing } from "@/constants/theme";
-import { getTokoDetail } from "@/lib/api";
 import { Feather } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
-import { router, useLocalSearchParams } from "expo-router";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { type Href, router, useLocalSearchParams } from "expo-router";
 import {
   ActivityIndicator,
+  FlatList,
   Image,
-  Linking,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const rp = (n: number) => `Rp ${Math.round(n).toLocaleString("id-ID")}`;
+import EmptyState from "@/components/states/EmptyState";
+import ErrorState from "@/components/states/ErrorState";
+import LoadingState from "@/components/states/LoadingState";
+import { colors, radius, spacing } from "@/constants/theme";
+import { daftarProduk, detailUmkm } from "@/lib/api/produk";
+import { formatRupiah } from "@/lib/rupiah";
+import type { Produk } from "@/types/produk";
 
 export default function DetailToko() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const {
-    data: t,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ["toko", id],
-    queryFn: () => getTokoDetail(id),
-    retry: 1,
+  const nomor = Number(id);
+
+  const tokoQ = useQuery({
+    queryKey: ["umkm", "detail", nomor],
+    queryFn: () => detailUmkm(nomor),
+    enabled: Number.isFinite(nomor),
   });
 
-  if (isLoading)
-    return (
-      <SafeAreaView style={styles.screen}>
-        <ActivityIndicator color={colors.brand} style={{ marginTop: 60 }} />
-      </SafeAreaView>
-    );
-  if (isError || !t)
+  const produkQ = useInfiniteQuery({
+    queryKey: ["produk", "umkm", nomor],
+    queryFn: ({ pageParam }) =>
+      daftarProduk({ page: pageParam, umkm_id: nomor }),
+    initialPageParam: 1,
+    getNextPageParam: (h) =>
+      h.meta.current_page < h.meta.last_page
+        ? h.meta.current_page + 1
+        : undefined,
+    enabled: Number.isFinite(nomor),
+  });
+
+  const produk = produkQ.data?.pages.flatMap((h) => h.data) ?? [];
+
+  const appbar = (
+    <View style={styles.appbar}>
+      <Pressable
+        onPress={() => router.back()}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Kembali"
+      >
+        <Feather name="arrow-left" size={24} color={colors.text} />
+      </Pressable>
+      <Text style={styles.appbarTitle} numberOfLines={1}>
+        {tokoQ.data?.nama ?? "Toko"}
+      </Text>
+    </View>
+  );
+
+  if (tokoQ.isLoading) {
     return (
       <SafeAreaView style={styles.screen} edges={["top"]}>
-        <View style={styles.appbarPlain}>
-          <Pressable onPress={() => router.back()} hitSlop={10}>
-            <Feather name="arrow-left" size={24} color={colors.text} />
-          </Pressable>
-          <Text style={styles.appbarTitle}>Detail Toko</Text>
-        </View>
-        <View style={{ alignItems: "center", marginTop: 50, gap: 12 }}>
-          <Text style={{ color: colors.subtext }}>Gagal memuat toko.</Text>
-          <Pressable onPress={() => refetch()} style={styles.retry}>
-            <Text style={{ color: "#fff", fontWeight: "700" }}>Coba Lagi</Text>
-          </Pressable>
-        </View>
+        {appbar}
+        <LoadingState pesan="Memuat toko…" />
       </SafeAreaView>
     );
+  }
 
-  const produk: any[] = t.produk ?? [];
+  if (tokoQ.isError || !tokoQ.data) {
+    return (
+      <SafeAreaView style={styles.screen} edges={["top"]}>
+        {appbar}
+        <ErrorState error={tokoQ.error} onCobaLagi={() => tokoQ.refetch()} />
+      </SafeAreaView>
+    );
+  }
+
+  const t = tokoQ.data;
 
   return (
-    <SafeAreaView style={styles.screenGreen} edges={["top"]}>
-      {/* Header hijau */}
-      <View style={styles.header}>
-        <View style={styles.headBar}>
-          <Pressable onPress={() => router.back()} hitSlop={10}>
-            <Feather name="arrow-left" size={24} color={colors.white} />
-          </Pressable>
-          <Text style={styles.headTitle}>Detail Toko</Text>
-        </View>
-        <View style={styles.storeRow}>
-          <View style={styles.storeLogo}>
-            {t.foto ? (
-              <Image source={{ uri: t.foto }} style={styles.logoImg} />
-            ) : (
-              <Feather name="home" size={28} color={colors.white} />
-            )}
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.storeName}>{t.nama}</Text>
-            {t.jumlah_ulasan > 0 && (
-              <View style={styles.storeRating}>
-                <Feather name="star" size={14} color="#FCD34D" />
-                <Text style={styles.storeRatingText}>
-                  {t.rating} • {t.jumlah_ulasan} ulasan
-                </Text>
-              </View>
-            )}
-            {!!t.alamat && (
-              <Text style={styles.storeMeta} numberOfLines={1}>
-                {t.alamat}
-              </Text>
-            )}
-          </View>
-        </View>
-        <View style={styles.statsRow}>
-          <Stat value={`${produk.length}`} label="Produk" />
-          <Stat
-            value={produk.reduce((n, p) => n + (p.stok || 0), 0).toString()}
-            label="Total Stok"
-          />
-        </View>
-        <View style={styles.ctaRow}>
-          {!!t.no_hp && (
-            <Pressable
-              style={styles.ctaWhite}
-              onPress={() => Linking.openURL(`tel:${t.no_hp}`)}
-            >
-              <Feather name="phone" size={16} color={colors.brand} />
-              <Text style={styles.ctaWhiteText}>Telepon</Text>
-            </Pressable>
-          )}
-          {t.lat != null && t.lng != null && (
-            <Pressable
-              style={styles.ctaOutline}
-              onPress={() =>
-                Linking.openURL(
-                  `https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`,
-                )
-              }
-            >
-              <Feather name="map-pin" size={16} color={colors.white} />
-              <Text style={styles.ctaOutlineText}>Lokasi</Text>
-            </Pressable>
-          )}
-        </View>
-      </View>
+    <SafeAreaView style={styles.screen} edges={["top"]}>
+      {appbar}
 
-      <ScrollView
-        style={styles.body}
-        contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40 }}
-      >
-        {!!t.deskripsi && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Tentang Toko</Text>
-            <Text style={styles.desc}>{t.deskripsi}</Text>
-            {!!t.alamat && (
-              <Info icon="map-pin" label="Lokasi" value={t.alamat} />
-            )}
-            {!!t.no_hp && <Info icon="phone" label="Kontak" value={t.no_hp} />}
-          </View>
-        )}
-
-        {(t.ulasan?.length ?? 0) > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Ulasan ({t.jumlah_ulasan})</Text>
-            {t.ulasan.map((u: any) => {
-              const tgl = u.tanggal
-                ? new Date(u.tanggal).toLocaleDateString("id-ID", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })
-                : "";
-              return (
-                <View key={u.id} style={styles.ulasanItem}>
-                  <View style={styles.ulasanHead}>
-                    <View style={styles.ulasanAvatar}>
-                      <Text style={styles.ulasanAvatarText}>
-                        {(u.nama ?? "?").charAt(0).toUpperCase()}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.ulasanNama}>{u.nama}</Text>
-                      <View style={{ flexDirection: "row", gap: 2 }}>
-                        {[1, 2, 3, 4, 5].map((i) => (
-                          <Feather
-                            key={i}
-                            name="star"
-                            size={13}
-                            color={i <= u.rating ? "#F59E0B" : "#E2E8F0"}
-                          />
-                        ))}
-                      </View>
-                    </View>
-                    {!!tgl && <Text style={styles.ulasanTgl}>{tgl}</Text>}
-                  </View>
-                  {!!u.komentar && (
-                    <Text style={styles.ulasanKomentar}>{u.komentar}</Text>
-                  )}
-                </View>
-              );
-            })}
-          </View>
-        )}
-
-        <Text style={styles.sectionTitle}>Produk ({produk.length})</Text>
-        <View style={styles.grid}>
-          {produk.map((p) => (
-            <Pressable
-              key={p.id}
-              style={styles.prodCard}
-              onPress={() => router.push(`/produk/${p.id}` as any)}
-            >
-              <View style={styles.prodImg}>
-                {p.gambar?.[0] ? (
-                  <Image source={{ uri: p.gambar[0] }} style={styles.logoImg} />
-                ) : (
-                  <Feather name="image" size={24} color="#CBD5E1" />
+      <FlatList
+        data={produk}
+        keyExtractor={(p) => p.slug}
+        numColumns={2}
+        columnWrapperStyle={
+          produk.length > 0 ? { gap: 12, paddingHorizontal: spacing.md } : undefined
+        }
+        contentContainerStyle={{ paddingBottom: 30, gap: 12 }}
+        ListHeaderComponent={
+          <View style={styles.identitas}>
+            <View style={styles.logo}>
+              {t.foto_url ? (
+                <Image
+                  source={{ uri: t.foto_url }}
+                  style={styles.logoIsi}
+                  accessibilityIgnoresInvertColors
+                />
+              ) : (
+                <Feather name="shopping-bag" size={26} color={colors.brand} />
+              )}
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={styles.namaBaris}>
+                <Text style={styles.nama}>{t.nama}</Text>
+                {t.is_verified && (
+                  <Feather name="check-circle" size={16} color={colors.brand} />
                 )}
               </View>
-              <View style={{ padding: 10 }}>
-                <Text style={styles.prodNama} numberOfLines={2}>
-                  {p.nama}
+              {!!t.deskripsi && (
+                <Text style={styles.deskripsi}>{t.deskripsi}</Text>
+              )}
+              {!!t.alamat && (
+                <View style={styles.alamatBaris}>
+                  <Feather name="map-pin" size={13} color={colors.subtext} />
+                  <Text style={styles.alamat} numberOfLines={2}>
+                    {[t.alamat, t.wilayah?.nama_lengkap]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.metaBaris}>
+                {/*
+                  Jumlah produk diambil dari agregat peladen, bukan dari panjang
+                  halaman yang kebetulan sudah termuat — daftar ini bergulir tak
+                  berhingga, jadi angkanya dulu bertambah sendiri saat pengguna
+                  menggulir.
+                */}
+                <Text style={styles.jumlah}>
+                  {t.jumlah_produk != null
+                    ? `${t.jumlah_produk} produk`
+                    : produkQ.isLoading
+                      ? "Memuat produk…"
+                      : `${produk.length} produk`}
                 </Text>
-                <Text style={styles.prodHarga}>{rp(p.harga)}</Text>
-                <Text style={styles.prodStok}>Stok: {p.stok}</Text>
+                {t.rating_rata != null && (
+                  <View style={styles.rating}>
+                    <Feather name="star" size={13} color="#F59E0B" />
+                    <Text style={styles.metaTeks}>
+                      {t.rating_rata.toFixed(1)}
+                      {t.jumlah_ulasan ? ` (${t.jumlah_ulasan} ulasan)` : ""}
+                    </Text>
+                  </View>
+                )}
               </View>
-            </Pressable>
-          ))}
-          {produk.length === 0 && (
-            <Text style={styles.empty}>Belum ada produk.</Text>
-          )}
-        </View>
-      </ScrollView>
+            </View>
+          </View>
+        }
+        renderItem={({ item }) => <KartuProduk p={item} />}
+        onEndReachedThreshold={0.4}
+        onEndReached={() => {
+          if (produkQ.hasNextPage && !produkQ.isFetchingNextPage)
+            produkQ.fetchNextPage();
+        }}
+        ListFooterComponent={
+          produkQ.isFetchingNextPage ? (
+            <ActivityIndicator
+              color={colors.brand}
+              style={{ marginVertical: 16 }}
+            />
+          ) : null
+        }
+        ListEmptyComponent={
+          produkQ.isLoading ? (
+            <LoadingState pesan="Memuat produk…" />
+          ) : produkQ.isError ? (
+            <ErrorState
+              error={produkQ.error}
+              onCobaLagi={() => produkQ.refetch()}
+            />
+          ) : (
+            <EmptyState
+              icon="shopping-bag"
+              judul="Belum ada produk"
+              pesan="Toko ini belum memajang produk apa pun."
+              aksiLabel="Lihat Produk Lain"
+              onAksi={() => router.push("/pasar" as Href)}
+            />
+          )
+        }
+      />
     </SafeAreaView>
   );
 }
 
-const Stat = ({ value, label }: { value: string; label: string }) => (
-  <View style={styles.stat}>
-    <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.statLabel}>{label}</Text>
-  </View>
-);
-const Info = ({
-  icon,
-  label,
-  value,
-}: {
-  icon: any;
-  label: string;
-  value: string;
-}) => (
-  <View style={styles.infoRow}>
-    <Feather name={icon} size={16} color={colors.brand} />
-    <View style={{ flex: 1 }}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
-  </View>
-);
+function KartuProduk({ p }: { p: Produk }) {
+  // `tersedia` dihitung peladen dari `is_active && stok > 0`. Menghitung
+  // `stok > 0` sendiri melewatkan produk yang stoknya ada tapi dinonaktifkan.
+  const habis = !p.tersedia;
+
+  return (
+    <Pressable
+      style={styles.kartu}
+      onPress={() => router.push(`/produk/${p.slug}` as Href)}
+      accessibilityRole="button"
+      accessibilityLabel={`${p.nama}, ${formatRupiah(p.harga)}${habis ? ", tidak tersedia" : ""}`}
+    >
+      <View style={styles.gambar}>
+        {p.foto_utama_url ? (
+          <Image
+            source={{ uri: p.foto_utama_url }}
+            style={styles.gambarIsi}
+            accessibilityIgnoresInvertColors
+          />
+        ) : (
+          <Feather name="image" size={26} color="#CBD5E1" />
+        )}
+        {habis && (
+          <View style={styles.habisTanda}>
+            <Text style={styles.habisTeks}>
+              {p.stok > 0 ? "Tidak Dijual" : "Stok Habis"}
+            </Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.kartuIsi}>
+        <Text style={styles.produkNama} numberOfLines={2}>
+          {p.nama}
+        </Text>
+        <Text style={styles.harga}>{formatRupiah(p.harga)}</Text>
+      </View>
+    </Pressable>
+  );
+}
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#EEF3F1" },
-  screenGreen: { flex: 1, backgroundColor: colors.brand },
-  appbarPlain: {
+  appbar: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
@@ -250,177 +239,79 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 14,
   },
-  appbarTitle: { fontSize: 18, fontWeight: "700", color: colors.text },
-  retry: {
-    backgroundColor: colors.brand,
-    borderRadius: radius.pill,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-  },
-  header: {
-    backgroundColor: colors.brand,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: 20,
-  },
-  headBar: {
+  appbarTitle: { flex: 1, fontSize: 18, fontWeight: "700", color: colors.text },
+  identitas: {
     flexDirection: "row",
-    alignItems: "center",
     gap: 14,
-    paddingVertical: 10,
+    backgroundColor: colors.white,
+    padding: spacing.lg,
+    marginBottom: 4,
   },
-  headTitle: { fontSize: 18, fontWeight: "700", color: colors.white },
-  storeRow: {
+  logo: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#DCF3EA",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  logoIsi: { width: "100%", height: "100%" },
+  namaBaris: { flexDirection: "row", alignItems: "center", gap: 6 },
+  nama: { flexShrink: 1, fontSize: 18, fontWeight: "800", color: colors.text },
+  deskripsi: {
+    fontSize: 12,
+    color: colors.subtext,
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  metaBaris: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
     marginTop: 8,
-  },
-  storeLogo: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  logoImg: { width: "100%", height: "100%" },
-  storeName: { fontSize: 20, fontWeight: "800", color: colors.white },
-  storeMeta: { color: "rgba(255,255,255,0.85)", fontSize: 13, marginTop: 2 },
-  storeRating: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 4,
-  },
-  storeRatingText: { color: "#fff", fontSize: 13, fontWeight: "600" },
-  statsRow: { flexDirection: "row", gap: 12, marginTop: 18 },
-  stat: {
-    flex: 1,
-    backgroundColor: "rgba(255,255,255,0.14)",
-    borderRadius: radius.md,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  statValue: { color: colors.white, fontSize: 20, fontWeight: "800" },
-  statLabel: { color: "rgba(255,255,255,0.85)", fontSize: 12, marginTop: 2 },
-  ctaRow: { flexDirection: "row", gap: 12, marginTop: 16 },
-  ctaWhite: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: colors.white,
-    borderRadius: radius.md,
-    height: 46,
-  },
-  ctaWhiteText: { color: colors.brand, fontWeight: "700" },
-  ctaOutline: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.6)",
-    borderRadius: radius.md,
-    height: 46,
-  },
-  ctaOutlineText: { color: colors.white, fontWeight: "700" },
-  body: {
-    flex: 1,
-    backgroundColor: "#EEF3F1",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: 18,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: 10,
-  },
-  desc: { color: "#334155", fontSize: 14, lineHeight: 21, marginBottom: 12 },
-  infoRow: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "flex-start",
-    marginTop: 10,
-  },
-  infoLabel: { color: colors.subtext, fontSize: 12 },
-  infoValue: { color: colors.text, fontSize: 14, marginTop: 1 },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: 12,
-  },
-  grid: {
-    flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
   },
-  prodCard: {
-    width: "48.5%",
+  metaTeks: { fontSize: 12, color: colors.subtext },
+  rating: { flexDirection: "row", alignItems: "center", gap: 4 },
+  alamatBaris: {
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "flex-start",
+    marginTop: 6,
+  },
+  alamat: { flex: 1, fontSize: 12, color: colors.subtext, lineHeight: 17 },
+  jumlah: { fontSize: 12, color: colors.brand, fontWeight: "600" },
+  kartu: {
+    flex: 1,
     backgroundColor: colors.white,
     borderRadius: radius.md,
-    marginBottom: 12,
     overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#EEF2F6",
   },
-  prodImg: {
-    height: 120,
+  gambar: {
+    height: 130,
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
   },
-  prodNama: {
+  gambarIsi: { width: "100%", height: "100%" },
+  habisTanda: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: "rgba(15,23,42,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  habisTeks: { color: colors.white, fontWeight: "700", fontSize: 12 },
+  kartuIsi: { padding: 10, gap: 3 },
+  produkNama: {
     fontSize: 13,
     fontWeight: "600",
     color: colors.text,
     lineHeight: 18,
   },
-  prodHarga: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: colors.brand,
-    marginTop: 4,
-  },
-  prodStok: { fontSize: 12, color: colors.subtext, marginTop: 2 },
-  ulasanItem: {
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
-    paddingVertical: 12,
-  },
-  ulasanHead: { flexDirection: "row", alignItems: "center", gap: 10 },
-  ulasanAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#EAF7F1",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ulasanAvatarText: { color: colors.brand, fontWeight: "700" },
-  ulasanNama: { fontSize: 14, fontWeight: "600", color: colors.text },
-  ulasanTgl: { fontSize: 11, color: colors.subtext },
-  ulasanKomentar: {
-    fontSize: 13,
-    color: "#334155",
-    lineHeight: 19,
-    marginTop: 8,
-  },
-  empty: {
-    color: colors.subtext,
-    textAlign: "center",
-    marginTop: 20,
-    width: "100%",
-  },
+  harga: { fontSize: 15, fontWeight: "800", color: colors.brand },
 });

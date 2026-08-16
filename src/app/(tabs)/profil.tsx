@@ -1,12 +1,12 @@
 import { colors, radius, spacing } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { evaluate, EvaluatedAchievement, Stats } from "@/lib/achievements";
-import { getPesanan, getSaldo, getSetoran } from "@/lib/api";
+import { useStatistikSaya } from "@/hooks/useStatistikSaya";
+import { confirmDialog } from "@/lib/dialog";
+import { formatRupiah } from "@/lib/rupiah";
 import { Feather } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -44,7 +44,7 @@ const MENU: {
   {
     icon: "info",
     title: "Tentang Aplikasi",
-    sub: "Informasi Niti Resik",
+    sub: "Informasi Resikita",
     go: () => router.push("/tentang" as Href),
   },
   {
@@ -62,48 +62,18 @@ const MENU: {
 ];
 
 export default function Profil() {
-  const { user, logout } = useAuth();
-  const enabled = !!user;
+  const { user, keluar: keluarAkun } = useAuth();
+  const stat = useStatistikSaya(!!user);
 
-  const saldoQ = useQuery({ queryKey: ["saldo"], queryFn: getSaldo, enabled });
-  const setoranQ = useQuery({
-    queryKey: ["setoran"],
-    queryFn: getSetoran,
-    enabled,
-  });
-  const pesananQ = useQuery({
-    queryKey: ["pesanan-ringkas"],
-    queryFn: () => getPesanan(),
-    enabled,
-  });
-
-  const asList = (d: any) => (Array.isArray(d) ? d : (d?.data ?? []));
-  const setoranList = asList(setoranQ.data);
-  const totalSetorKg = setoranList.reduce(
-    (n: number, s: any) =>
-      n + Number(s.berat ?? s.berat_kg ?? s.total_berat ?? 0),
-    0,
-  );
-  const saldo = saldoQ.data ?? Number(user?.saldo ?? 0);
-  const jumlahBelanja = pesananQ.data?.total ?? asList(pesananQ.data).length;
-
-  const stats: Stats = {
-    saldo,
-    totalSetorKg,
-    jumlahSetor: setoranList.length,
-    jumlahBelanja,
-    jumlahLaporan: 0,
-    jumlahKlasifikasi: 0,
+  const achievements = evaluate({
+    saldo: stat.saldo,
+    totalSetorKg: stat.totalSetorKg,
+    jumlahSetor: stat.jumlahSetor,
+    jumlahBelanja: stat.jumlahPesanan,
+    jumlahLaporan: stat.jumlahLaporan,
+    jumlahKlasifikasi: stat.jumlahKlasifikasi,
     jumlahTps: 0,
-  };
-  const achievements = evaluate(stats);
-
-  // Bulatkan agar tidak muncul angka desimal panjang (mis. 44.6700000000000022)
-  const setorKg = Math.round(totalSetorKg * 10) / 10; // 1 desimal, mis. 44.7
-  const co2Kg = Math.round(setorKg * 3);
-  const pohon = Math.round(setorKg / 7);
-  const ribu = (n: number) =>
-    n >= 1000 ? `${Math.round(n / 1000)}K` : `${Math.round(n)}`;
+  });
 
   if (!user) {
     return (
@@ -127,18 +97,20 @@ export default function Profil() {
     );
   }
 
-  const bergabung = user.bergabung
-    ? new Date(user.bergabung).toLocaleDateString("id-ID", {
-        month: "long",
-        year: "numeric",
-      })
-    : null;
-
-  const keluar = () =>
-    Alert.alert("Keluar", "Yakin ingin keluar dari akun?", [
-      { text: "Batal", style: "cancel" },
-      { text: "Keluar", style: "destructive", onPress: () => logout() },
-    ]);
+  // `Alert.alert` dengan tombol tidak menampilkan tombolnya di web — pengguna
+  // menekan "Keluar" dan tidak terjadi apa pun. `confirmDialog` menangani
+  // keduanya.
+  const keluar = async () => {
+    const yakin = await confirmDialog(
+      "Keluar",
+      "Yakin ingin keluar dari akun?",
+      "Keluar",
+    );
+    if (yakin) {
+      await keluarAkun();
+      router.replace("/login");
+    }
+  };
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
@@ -176,29 +148,35 @@ export default function Profil() {
         {/* Stats card */}
         <View style={styles.statsCard}>
           <View style={styles.statsRow}>
-            <Stat icon="credit-card" label="Saldo" value={`Rp${ribu(saldo)}`} />
+            <Stat
+              icon="credit-card"
+              label="Saldo"
+              value={stat.memuat ? "—" : formatRupiah(stat.saldo)}
+            />
+            <Stat
+              icon="package"
+              label="Setoran"
+              value={stat.memuat ? "—" : String(stat.jumlahSetor)}
+            />
             <Stat
               icon="shopping-bag"
               label="Pesanan"
-              value={`${jumlahBelanja}`}
-            />
-            <Stat
-              icon="refresh-ccw"
-              label="Daur Ulang"
-              value={`${setorKg.toLocaleString("id-ID")} kg`}
+              value={stat.memuat ? "—" : String(stat.jumlahPesanan)}
             />
           </View>
           <View style={styles.divider} />
           <View style={styles.ecoRow}>
             <View style={styles.ecoBox}>
-              <Text style={styles.ecoLabel}>CO₂ Tersimpan</Text>
+              <Text style={styles.ecoLabel}>Laporan Dikirim</Text>
               <Text style={styles.ecoValue}>
-                {co2Kg.toLocaleString("id-ID")} kg
+                {stat.memuat ? "—" : stat.jumlahLaporan}
               </Text>
             </View>
             <View style={styles.ecoBox}>
-              <Text style={styles.ecoLabel}>Setara Pohon</Text>
-              <Text style={styles.ecoValue}>{pohon} pohon</Text>
+              <Text style={styles.ecoLabel}>Sampah Dipindai</Text>
+              <Text style={styles.ecoValue}>
+                {stat.memuat ? "—" : stat.jumlahKlasifikasi}
+              </Text>
             </View>
           </View>
         </View>
@@ -217,17 +195,31 @@ export default function Profil() {
             {achievements.map((a: EvaluatedAchievement) => (
               <View
                 key={a.key}
-                style={[styles.badge, !a.done && styles.badgeLocked]}
+                style={[styles.badge, a.done !== true && styles.badgeLocked]}
+                accessible
+                accessibilityLabel={`${a.label}: ${
+                  a.done === true
+                    ? "tercapai"
+                    : a.done === false
+                      ? "belum tercapai"
+                      : "belum bisa dinilai"
+                }`}
               >
                 <Feather
-                  name={(a.done ? a.icon : "lock") as any}
+                  name={
+                    a.done === true
+                      ? (a.icon as keyof typeof Feather.glyphMap)
+                      : a.done === false
+                        ? "lock"
+                        : "help-circle"
+                  }
                   size={22}
-                  color={a.done ? colors.brand : "#94A3B8"}
+                  color={a.done === true ? colors.brand : "#94A3B8"}
                 />
                 <Text
                   style={[
                     styles.badgeText,
-                    { color: a.done ? colors.text : "#94A3B8" },
+                    { color: a.done === true ? colors.text : "#94A3B8" },
                   ]}
                   numberOfLines={2}
                 >
@@ -262,9 +254,9 @@ export default function Profil() {
         </Pressable>
 
         <Text style={styles.footer}>
-          {bergabung ? `Bergabung sejak ${bergabung}` : "Niti Resik"}
+          Resikita
         </Text>
-        <Text style={styles.footerVer}>Niti Resik v1.0.0</Text>
+        <Text style={styles.footerVer}>Resikita v1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -295,6 +287,32 @@ function Stat({
 }
 
 const styles = StyleSheet.create({
+  petugasKartu: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#0F766E",
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginTop: 8,
+    minHeight: 44,
+  },
+  petugasIkon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  petugasJudul: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
+  petugasSub: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.75)",
+    marginTop: 2,
+    lineHeight: 17,
+  },
   screen: { flex: 1, backgroundColor: colors.bg },
   pageTitle: {
     color: colors.white,

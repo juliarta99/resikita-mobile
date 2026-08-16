@@ -1,20 +1,30 @@
-import { colors, radius, spacing } from "@/constants/theme";
-import { useAuth } from "@/context/AuthContext";
-import { updateProfil } from "@/lib/api";
 import { Feather } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import * as ImagePicker from "expo-image-picker";
+import { useMutation } from "@tanstack/react-query";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import { WilayahPicker } from "@/components/WilayahPicker";
+import { colors, radius, spacing } from "@/constants/theme";
+import { useAuth } from "@/context/AuthContext";
+import { useWilayah } from "@/hooks/useWilayah";
+import { ubahAvatar, ubahProfil } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/error";
+import { notify } from "@/lib/dialog";
+import { Image } from "react-native";
+import type { IsoDate } from "@/types/api";
 
 const initials = (name: string) =>
   name
@@ -24,48 +34,121 @@ const initials = (name: string) =>
     .map((w) => w[0]?.toUpperCase() ?? "")
     .join("") || "?";
 
+/** `Date` → `YYYY-MM-DD`, tanpa melewati UTC yang bisa menggeser tanggalnya sehari. */
+function keIsoDate(d: Date): IsoDate {
+  const bulan = String(d.getMonth() + 1).padStart(2, "0");
+  const tanggal = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${bulan}-${tanggal}`;
+}
+
+function dariIsoDate(nilai?: string | null): Date | null {
+  if (!nilai) return null;
+  const d = new Date(`${nilai}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 export default function EditProfil() {
   const { user, refresh } = useAuth();
-  const [name, setName] = useState(user?.name ?? "");
-  const [tgl, setTgl] = useState(user?.tanggal_lahir ?? "");
-  const [jk, setJk] = useState<"L" | "P" | "">(
-    (user?.jenis_kelamin as any) ?? "",
-  );
-  const [saving, setSaving] = useState(false);
+  const wilayah = useWilayah(user?.wilayah);
 
-  const simpan = async () => {
-    if (!name.trim())
-      return Alert.alert("Lengkapi", "Nama tidak boleh kosong.");
-    if (tgl && !/^\d{4}-\d{2}-\d{2}$/.test(tgl))
-      return Alert.alert(
-        "Format Tanggal",
-        "Gunakan format YYYY-MM-DD, mis. 1999-08-17.",
-      );
-    setSaving(true);
-    try {
-      await updateProfil({
-        name: name.trim(),
-        tanggal_lahir: tgl || null,
-        jenis_kelamin: (jk || null) as any,
-      });
+  const [name, setName] = useState(user?.name ?? "");
+  const [phone, setPhone] = useState(user?.phone ?? "");
+  const [tgl, setTgl] = useState<Date | null>(dariIsoDate(user?.tanggal_lahir));
+  const [showDate, setShowDate] = useState(false);
+  const [jk, setJk] = useState<"L" | "P" | "">(user?.jenis_kelamin ?? "");
+  const [errorField, setErrorField] = useState<Record<string, string>>({});
+  const [error, setError] = useState("");
+
+  const gantiAvatar = useMutation({
+    mutationFn: (uri: string) => ubahAvatar(uri),
+    onSuccess: async () => {
       await refresh();
-      Alert.alert("Tersimpan", "Profil berhasil diperbarui.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
-    } catch (e: any) {
-      Alert.alert(
+      notify("Tersimpan", "Foto profil Anda sudah diperbarui.");
+    },
+    onError: (e: unknown) =>
+      notify(
         "Gagal",
-        e?.response?.data?.message ?? "Tidak dapat menyimpan perubahan.",
-      );
-    } finally {
-      setSaving(false);
+        e instanceof ApiError
+          ? e.pesanUntukPengguna
+          : "Foto tidak dapat diunggah.",
+      ),
+  });
+
+  const pilihAvatar = async () => {
+    const izin = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!izin.granted) {
+      notify("Izin ditolak", "Beri izin galeri untuk mengganti foto profil.");
+      return;
+    }
+    const hasil = await ImagePicker.launchImageLibraryAsync({
+      quality: 0.7,
+      mediaTypes: ["images"],
+      // Dipotong persegi karena avatar dirender bulat di seluruh aplikasi;
+      // memotongnya di sini mencegah wajah pengguna terpangkas sembarangan.
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+    if (!hasil.canceled && hasil.assets[0]) {
+      gantiAvatar.mutate(hasil.assets[0].uri);
     }
   };
+
+  const simpan = useMutation({
+    mutationFn: () =>
+      ubahProfil({
+        name: name.trim(),
+        // String kosong bukan hal yang sama dengan "tidak diisi". Mengirim ""
+        // membuat peladen memvalidasi nilai kosong itu dan menolaknya; `null`
+        // yang berarti "kosongkan field ini".
+        phone: phone.trim() || null,
+        tanggal_lahir: tgl ? keIsoDate(tgl) : null,
+        jenis_kelamin: jk || null,
+        // Hanya dikirim setelah keempat tingkat terpilih. Mengirim id kecamatan
+        // sebagai `wilayah_id` akan diterima peladen tapi menempatkan pengguna
+        // di tingkat yang salah.
+        ...(wilayah.wilayahId ? { wilayah_id: wilayah.wilayahId } : {}),
+      }),
+    onSuccess: async () => {
+      await refresh();
+      notify("Tersimpan", "Profil berhasil diperbarui.");
+      router.back();
+    },
+    onError: (e: unknown) => {
+      if (e instanceof ApiError) {
+        setErrorField({
+          name: e.pesanField("name") ?? "",
+          phone: e.pesanField("phone") ?? "",
+          tanggal_lahir: e.pesanField("tanggal_lahir") ?? "",
+          wilayah_id: e.pesanField("wilayah_id") ?? "",
+        });
+        setError(e.errors ? "" : e.pesanUntukPengguna);
+      } else {
+        setError("Tidak dapat menyimpan perubahan.");
+      }
+    },
+  });
+
+  const kirim = () => {
+    setError("");
+    setErrorField({});
+    if (!name.trim()) {
+      setError("Nama tidak boleh kosong.");
+      return;
+    }
+    simpan.mutate();
+  };
+
+  const wilayahTersimpan = user?.wilayah?.desa?.nama;
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
       <View style={styles.appbar}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Kembali"
+        >
           <Feather name="arrow-left" size={24} color={colors.text} />
         </Pressable>
         <Text style={styles.appbarTitle}>Edit Profil</Text>
@@ -73,80 +156,185 @@ export default function EditProfil() {
 
       <ScrollView
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40 }}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.avatarWrap}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {initials(name || user?.name || "")}
-            </Text>
-          </View>
+          <Pressable
+            onPress={pilihAvatar}
+            disabled={gantiAvatar.isPending}
+            style={styles.avatar}
+            accessibilityRole="button"
+            accessibilityLabel={
+              user?.avatar_url ? "Ganti foto profil" : "Tambahkan foto profil"
+            }
+            accessibilityState={{ busy: gantiAvatar.isPending }}
+          >
+            {gantiAvatar.isPending ? (
+              <ActivityIndicator color={colors.white} />
+            ) : user?.avatar_url ? (
+              <Image
+                source={{ uri: user.avatar_url }}
+                style={styles.avatarFoto}
+                accessibilityIgnoresInvertColors
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {initials(name || user?.name || "")}
+              </Text>
+            )}
+            <View style={styles.avatarKamera}>
+              <Feather name="camera" size={13} color={colors.white} />
+            </View>
+          </Pressable>
           <Text style={styles.avatarHint}>
-            Foto profil memakai inisial nama
+            Ketuk untuk {user?.avatar_url ? "mengganti" : "menambahkan"} foto
+            profil
           </Text>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Informasi Pribadi</Text>
 
-          <Field label="Nama Lengkap" icon="user">
+          <Baris label="Nama Lengkap" icon="user" error={errorField.name}>
             <TextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
               placeholder="Nama lengkap"
               placeholderTextColor="#9AA5B1"
+              accessibilityLabel="Nama lengkap"
             />
-          </Field>
+          </Baris>
 
-          <Field label="Tanggal Lahir" icon="calendar">
+          <Baris label="Nomor WhatsApp" icon="phone" error={errorField.phone}>
             <TextInput
               style={styles.input}
-              value={tgl ?? ""}
-              onChangeText={setTgl}
-              placeholder="YYYY-MM-DD"
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="08xxxxxxxxxx (opsional)"
               placeholderTextColor="#9AA5B1"
-              keyboardType="numbers-and-punctuation"
+              keyboardType="phone-pad"
+              accessibilityLabel="Nomor WhatsApp, opsional"
             />
-          </Field>
+          </Baris>
+
+          <Baris
+            label="Tanggal Lahir"
+            icon="calendar"
+            error={errorField.tanggal_lahir}
+          >
+            {/*
+              Pemilih tanggal, bukan input teks bebas. Format YYYY-MM-DD yang
+              diketik manual adalah sumber galat 422 yang tidak perlu, dan
+              tidak ada cara pengguna menebak formatnya tanpa diberi tahu.
+            */}
+            <Pressable
+              style={styles.dateBox}
+              onPress={() => setShowDate(true)}
+              accessibilityRole="button"
+              accessibilityLabel={
+                tgl
+                  ? `Tanggal lahir ${keIsoDate(tgl)}. Ketuk untuk mengubah`
+                  : "Pilih tanggal lahir"
+              }
+            >
+              <Text style={{ color: tgl ? colors.text : "#9AA5B1", fontSize: 15 }}>
+                {tgl ? keIsoDate(tgl) : "Pilih tanggal"}
+              </Text>
+              {!!tgl && (
+                <Pressable
+                  onPress={(e) => {
+                    e?.stopPropagation?.();
+                    setTgl(null);
+                  }}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Hapus tanggal lahir"
+                >
+                  <Feather name="x" size={16} color={colors.subtext} />
+                </Pressable>
+              )}
+            </Pressable>
+            {showDate && (
+              <DateTimePicker
+                value={tgl ?? new Date(2000, 0, 1)}
+                mode="date"
+                maximumDate={new Date()}
+                onChange={(_, d) => {
+                  setShowDate(Platform.OS === "ios");
+                  if (d) setTgl(d);
+                }}
+              />
+            )}
+          </Baris>
 
           <Text style={styles.label}>Jenis Kelamin</Text>
           <View style={styles.jkRow}>
-            {(["L", "P"] as const).map((v) => (
-              <Pressable
-                key={v}
-                style={[styles.jkBtn, jk === v && styles.jkActive]}
-                onPress={() => setJk(v)}
-              >
-                <Text
-                  style={[styles.jkText, jk === v && { color: colors.white }]}
+            {(["L", "P"] as const).map((v) => {
+              const aktif = jk === v;
+              const teks = v === "L" ? "Laki-laki" : "Perempuan";
+              return (
+                <Pressable
+                  key={v}
+                  style={[styles.jkBtn, aktif && styles.jkActive]}
+                  onPress={() => setJk(aktif ? "" : v)}
+                  accessibilityRole="radio"
+                  accessibilityLabel={teks}
+                  accessibilityState={{ selected: aktif }}
                 >
-                  {v === "L" ? "Laki-laki" : "Perempuan"}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text style={[styles.jkText, aktif && { color: colors.white }]}>
+                    {teks}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
 
-        {/* Read-only: dikelola sistem / dipakai untuk login & verifikasi */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Domisili</Text>
+          <Text style={styles.cardSub}>
+            {wilayahTersimpan
+              ? "Menentukan fasilitas mana yang ditampilkan dan menajamkan jawaban asisten."
+              : "Belum diisi. Melengkapinya membuat fasilitas terdekat dan jawaban asisten lebih relevan."}
+          </Text>
+          <WilayahPicker wilayah={wilayah} />
+          {!!errorField.wilayah_id && (
+            <Text style={styles.errField}>{errorField.wilayah_id}</Text>
+          )}
+          {!wilayah.lengkap && !!wilayah.pilihan.provinsi && (
+            <Text style={styles.hint}>
+              Pilih sampai tingkat desa agar domisili tersimpan.
+            </Text>
+          )}
+        </View>
+
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Data Akun</Text>
           <ReadOnly label="Email" value={user?.email || "-"} />
-          <ReadOnly label="Nomor Telepon" value={user?.phone || "-"} />
-          <ReadOnly label="NIK" value={user?.nik || "-"} />
           <ReadOnly label="ID Nasabah" value={user?.kode_qr || "-"} last />
           <Text style={styles.note}>
-            Email, nomor telepon, dan NIK tidak dapat diubah sendiri. Hubungi
-            admin bila perlu perubahan.
+            Email dipakai untuk masuk dan tidak dapat diubah sendiri. ID Nasabah
+            adalah kode yang ditunjukkan ke petugas bank sampah saat menyetor.
           </Text>
         </View>
 
+        {!!error && (
+          <Text style={styles.error} accessibilityLiveRegion="polite">
+            {error}
+          </Text>
+        )}
+
         <Pressable
-          style={[styles.save, saving && { opacity: 0.7 }]}
-          onPress={simpan}
-          disabled={saving}
+          style={[styles.save, simpan.isPending && { opacity: 0.7 }]}
+          onPress={kirim}
+          disabled={simpan.isPending}
+          accessibilityRole="button"
+          accessibilityLabel="Simpan perubahan profil"
+          accessibilityState={{ disabled: simpan.isPending, busy: simpan.isPending }}
         >
-          {saving ? (
-            <ActivityIndicator color="#fff" />
+          {simpan.isPending ? (
+            <ActivityIndicator color={colors.white} />
           ) : (
             <Text style={styles.saveText}>Simpan Perubahan</Text>
           )}
@@ -156,13 +344,15 @@ export default function EditProfil() {
   );
 }
 
-function Field({
+function Baris({
   label,
   icon,
+  error,
   children,
 }: {
   label: string;
   icon: keyof typeof Feather.glyphMap;
+  error?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -172,9 +362,11 @@ function Field({
         <Text style={styles.label}>{label}</Text>
       </View>
       {children}
+      {!!error && <Text style={styles.errField}>{error}</Text>}
     </View>
   );
 }
+
 function ReadOnly({
   label,
   value,
@@ -213,8 +405,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "visible",
   },
   avatarText: { color: colors.white, fontWeight: "700", fontSize: 30 },
+  avatarFoto: { width: "100%", height: "100%" },
+  avatarKamera: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.brandDark,
+    borderWidth: 2,
+    borderColor: "#EEF3F1",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   avatarHint: { color: colors.subtext, fontSize: 12 },
   card: {
     backgroundColor: colors.white,
@@ -226,6 +433,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: colors.text,
+    marginBottom: 6,
+  },
+  cardSub: {
+    fontSize: 12,
+    color: colors.subtext,
+    lineHeight: 17,
     marginBottom: 14,
   },
   labelRow: {
@@ -242,6 +455,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 48,
     color: colors.text,
+    backgroundColor: colors.white,
+  },
+  dateBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    height: 48,
     backgroundColor: colors.white,
   },
   jkRow: { flexDirection: "row", gap: 12 },
@@ -271,6 +495,14 @@ const styles = StyleSheet.create({
     maxWidth: "60%",
   },
   note: { color: "#94A3B8", fontSize: 12, marginTop: 10, lineHeight: 17 },
+  hint: { color: colors.subtext, fontSize: 12, marginTop: 4 },
+  errField: { color: colors.danger, fontSize: 12, marginTop: 4 },
+  error: {
+    color: colors.danger,
+    fontSize: 13,
+    marginBottom: 12,
+    textAlign: "center",
+  },
   save: {
     backgroundColor: colors.brand,
     height: 52,

@@ -9,7 +9,7 @@ const SECTIONS: { title: string; points: string[] }[] = [
   {
     title: "Penerimaan Syarat",
     points: [
-      "Dengan mengunduh dan menggunakan Niti Resik, kamu setuju terikat pada Syarat & Ketentuan ini.",
+      "Dengan mengunduh dan menggunakan Resikita, kamu setuju terikat pada Syarat & Ketentuan ini.",
       "Jika tidak setuju, mohon untuk tidak menggunakan aplikasi.",
       "Kamu harus berusia minimal 17 tahun atau memiliki izin orang tua/wali.",
     ],
@@ -34,7 +34,7 @@ const SECTIONS: { title: string; points: string[] }[] = [
     title: "Batasan Tanggung Jawab",
     points: [
       "Hasil Klasifikasi AI bersifat bantuan dan tidak menjamin akurasi 100%.",
-      "Niti Resik berupaya menjaga layanan tetap tersedia, namun tidak menjamin bebas gangguan.",
+      "Resikita berupaya menjaga layanan tetap tersedia, namun tidak menjamin bebas gangguan.",
     ],
   },
 ];
