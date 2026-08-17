@@ -4,7 +4,7 @@ import { storage } from "@/lib/storage";
  * Kunci penyimpanan token Sanctum.
  *
  * Namanya dipertahankan dari versi sebelumnya supaya pengguna yang memperbarui
- * aplikasi tidak terlempar keluar — token lama tetap ditemukan di tempatnya.
+ * aplikasi tidak terlempar keluar, token lama tetap ditemukan di tempatnya.
  */
 const TOKEN_KEY = "nr_token";
 

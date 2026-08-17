@@ -5,23 +5,24 @@ import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { colors, radius, spacing } from "@/constants/theme";
 import { ApiError } from "@/lib/api/error";
-import { kirimProgresPenugasan, selesaikanPenugasan } from "@/lib/api/petugas";
+import { kirimProgresPenugasan } from "@/lib/api/petugas";
 import { confirmDialog, notify } from "@/lib/dialog";
+import { urlMedia } from "@/lib/media";
 
 type Mode = "progres" | "selesai";
 
@@ -81,19 +82,28 @@ export default function CatatProgres() {
     if (!hasil.canceled && hasil.assets[0]) setFoto(hasil.assets[0].uri);
   };
 
+  /**
+   * Satu endpoint untuk mencatat progres dan untuk menyelesaikan.
+   *
+   * Yang membedakan hanya `status_progres`. Tidak ada `selesaikanPenugasan`
+   * terpisah — memanggil endpoint yang sama dengan `"selesai"` sekaligus
+   * menutup laporan induknya, dan peladen mewajibkan foto bukti pada langkah
+   * itu. Koordinat ikut hanya bila sudah didapat; ia opsional, dan memaksanya
+   * dengan `!` akan mengirim `NaN` ketika izin lokasi ditolak.
+   */
   const kirim = useMutation({
     mutationFn: () =>
-      mode === "selesai"
-        ? selesaikanPenugasan(nomor, { catatan: catatan.trim() }, foto ?? undefined)
-        : kirimProgresPenugasan(
-            nomor,
-            {
-              catatan: catatan.trim(),
-              latitude: koordinat!.lat,
-              longitude: koordinat!.lng,
-            },
-            foto ?? undefined,
-          ),
+      kirimProgresPenugasan(
+        nomor,
+        {
+          status_progres: mode === "selesai" ? "selesai" : "dikerjakan",
+          catatan: catatan.trim() || undefined,
+          ...(koordinat
+            ? { latitude: koordinat.lat, longitude: koordinat.lng }
+            : {}),
+        },
+        foto ?? undefined,
+      ),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["petugas"] });
       notify(
@@ -121,7 +131,7 @@ export default function CatatProgres() {
      * Koordinat wajib untuk progres, tapi tidak untuk penyelesaian.
      *
      * Kontrak yang menentukan: `POST …/progres` menerima `latitude` dan
-     * `longitude`, sementara `POST …/selesai` tidak. Masuk akal — catatan
+     * `longitude`, sementara `POST …/selesai` tidak. Masuk akal, catatan
      * progres membuktikan petugas benar-benar berada di lokasi, sedangkan
      * laporan penyelesaian bisa dikirim setelah ia kembali.
      */
@@ -209,7 +219,7 @@ export default function CatatProgres() {
           {foto ? (
             <View style={styles.fotoWrap}>
               <Image
-                source={{ uri: foto }}
+                source={{ uri: urlMedia(foto) }}
                 style={styles.foto}
                 accessibilityIgnoresInvertColors
                 accessibilityLabel="Foto bukti penanganan"

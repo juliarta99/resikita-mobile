@@ -2,12 +2,12 @@ import { Feather } from "@expo/vector-icons";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 
 import { colors, radius, spacing } from "@/constants/theme";
@@ -59,7 +59,7 @@ export function WilayahPicker({ wilayah, wajib, error }: Props) {
    *
    * Empat pilihan bertingkat adalah pekerjaan yang melelahkan di layar kecil,
    * dan sebagian besar pengguna mengisinya untuk tempat mereka sedang berdiri.
-   * Satu ketukan menggantikan empat daftar gulir — dan hasilnya tetap bisa
+   * Satu ketukan menggantikan empat daftar gulir, dan hasilnya tetap bisa
    * disunting, karena GPS di dalam ruangan kadang meleset ke desa sebelah.
    */
   const deteksiLokasi = async () => {
@@ -74,8 +74,8 @@ export function WilayahPicker({ wilayah, wajib, error }: Props) {
           : "Lokasi Anda belum masuk wilayah yang terdaftar. Silakan pilih manual.",
       );
     } catch (e) {
-      // Pesannya menyebut sebab yang sebenarnya — izin, GPS mati, atau halaman
-      // http — bukan "lokasi tidak terdeteksi" yang tidak menolong siapa pun.
+      // Pesannya menyebut sebab yang sebenarnya, izin, GPS mati, atau halaman
+      // http, bukan "lokasi tidak terdeteksi" yang tidak menolong siapa pun.
       setPesanDeteksi(pesanGalatLokasi(e));
     } finally {
       setMendeteksi(false);

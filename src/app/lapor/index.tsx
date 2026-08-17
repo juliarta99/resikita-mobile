@@ -4,16 +4,16 @@ import * as ImagePicker from "expo-image-picker";
 import { type Href, router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -26,10 +26,10 @@ import { useAuth } from "@/context/AuthContext";
 import { useGalatForm } from "@/hooks/useGalatForm";
 import { buatLaporan, cekDuplikat, kategoriLaporan } from "@/lib/api/laporan";
 import { resolusiWilayah } from "@/lib/api/wilayah";
+import { notify } from "@/lib/dialog";
 import { duplikatSementara } from "@/lib/duplikatSementara";
 import { alamatDariKoordinat } from "@/lib/geo";
 import { deteksiPosisi, pesanGalatLokasi } from "@/lib/lokasi";
-import { notify } from "@/lib/dialog";
 import type { SumberInput } from "@/types/enums";
 
 /** Kontrak mengizinkan lima foto per laporan (§9.5). */
@@ -48,9 +48,10 @@ export default function BuatLaporan() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [deskripsi, setDeskripsi] = useState("");
   const [sumber, setSumber] = useState<SumberInput>("ketik");
-  const [gabungKe, setGabungKe] = useState<{ id: number; tiket: string } | null>(
-    null,
-  );
+  const [gabungKe, setGabungKe] = useState<{
+    id: number;
+    tiket: string;
+  } | null>(null);
   const [galatLokasi, setGalatLokasi] = useState("");
   const [mendeteksi, setMendeteksi] = useState(false);
   const galat = useGalatForm();
@@ -71,7 +72,7 @@ export default function BuatLaporan() {
    *
    * Logikanya sama persis dengan yang dipakai peladen saat laporan disimpan,
    * jadi apa yang dilihat pelapor tidak mungkin berbeda dari apa yang tersimpan
-   * — dan kalau titiknya meleset, ia bisa membetulkannya sekarang, bukan
+   *, dan kalau titiknya meleset, ia bisa membetulkannya sekarang, bukan
    * setelah laporannya nyasar ke dinas kabupaten sebelah.
    */
   const wilayahQ = useQuery({
@@ -84,7 +85,7 @@ export default function BuatLaporan() {
   /**
    * Kandidat laporan kembar di sekitar titik.
    *
-   * `kategori_id` ikut dikirim bila sudah dipilih — ia mempersempit kandidat ke
+   * `kategori_id` ikut dikirim bila sudah dipilih, ia mempersempit kandidat ke
    * masalah yang benar-benar sejenis, sehingga tumpukan sampah tidak ditawarkan
    * digabung dengan laporan saluran tersumbat yang kebetulan di seberang jalan.
    */
@@ -122,7 +123,7 @@ export default function BuatLaporan() {
   /**
    * Deteksi titik dari GPS.
    *
-   * Kegagalannya ditampilkan **di layar, tepat di bawah tombolnya** — bukan
+   * Kegagalannya ditampilkan **di layar, tepat di bawah tombolnya**, bukan
    * lewat dialog. Sebabnya beragam (izin ditolak, GPS mati, halaman dibuka lewat
    * http di alamat IP lokal sehingga peramban menolak geolokasi), dan pesan yang
    * menetap bisa dibaca ulang sambil pengguna membetulkan keadaannya. Dialog
@@ -182,7 +183,7 @@ export default function BuatLaporan() {
       /**
        * Penanggung jawab ditampilkan apa adanya dari peladen. Inilah yang
        * membuat alur kewenangan terasa transparan alih-alih seperti kotak hitam
-       * — pelapor tahu laporannya mendarat di meja siapa, dan kenapa.
+       *, pelapor tahu laporannya mendarat di meja siapa, dan kenapa.
        */
       const pj = hasil.penanggung_jawab;
       const rincian = [pj?.tipe_label, pj?.alasan_label]
@@ -199,13 +200,17 @@ export default function BuatLaporan() {
       router.replace("/lapor/riwayat" as Href);
     },
     onError: (e: unknown) =>
-      galat.tangani(e, "Laporan gagal dikirim. Periksa koneksi Anda lalu ulangi.", {
-        // Peladen melaporkan koordinat pada `latitude`/`longitude`; di layar ini
-        // keduanya satu penanda titik di peta.
-        latitude: "lokasi",
-        longitude: "lokasi",
-        "foto.0": "foto",
-      }),
+      galat.tangani(
+        e,
+        "Laporan gagal dikirim. Periksa koneksi Anda lalu ulangi.",
+        {
+          // Peladen melaporkan koordinat pada `latitude`/`longitude`; di layar ini
+          // keduanya satu penanda titik di peta.
+          latitude: "lokasi",
+          longitude: "lokasi",
+          "foto.0": "foto",
+        },
+      ),
   });
 
   const submit = () => {
@@ -280,7 +285,7 @@ export default function BuatLaporan() {
             <View style={styles.fotoAksi}>
               {/*
                 Dua tombol terpisah, bukan satu dialog pilihan. `Alert.alert`
-                bertombol tidak menampilkan tombolnya di web — pengguna menekan
+                bertombol tidak menampilkan tombolnya di web, pengguna menekan
                 "Tambah Foto" dan tidak terjadi apa pun.
               */}
               <Pressable
@@ -364,7 +369,14 @@ export default function BuatLaporan() {
               pick
               markers={
                 coord
-                  ? [{ id: "titik", lat: coord.lat, lng: coord.lng, color: "green" }]
+                  ? [
+                      {
+                        id: "titik",
+                        lat: coord.lat,
+                        lng: coord.lng,
+                        color: "green",
+                      },
+                    ]
                   : []
               }
               onMapPress={(lat, lng) => setDariKoordinat(lat, lng)}
@@ -430,7 +442,8 @@ export default function BuatLaporan() {
                       .join(", ")}
                   </Text>
                   <Text style={styles.wilayahBantu}>
-                    Kalau ini bukan lokasi yang Anda maksud, geser titik di peta.
+                    Kalau ini bukan lokasi yang Anda maksud, geser titik di
+                    peta.
                   </Text>
                 </>
               ) : (
@@ -440,8 +453,8 @@ export default function BuatLaporan() {
                   </Text>
                   <Text style={styles.wilayahBantu}>
                     Titik ini belum masuk wilayah yang terdaftar. Laporan tetap
-                    bisa dikirim dan akan diteruskan Fasilitator Wilayah ke dinas
-                    setempat.
+                    bisa dikirim dan akan diteruskan Fasilitator Wilayah ke
+                    dinas setempat.
                   </Text>
                 </>
               )}
@@ -469,7 +482,8 @@ export default function BuatLaporan() {
                   dekat sini
                 </Text>
                 <Text style={styles.duplikatTeks}>
-                  Ketuk untuk melihat dan memutuskan apakah ini masalah yang sama.
+                  Ketuk untuk melihat dan memutuskan apakah ini masalah yang
+                  sama.
                 </Text>
               </View>
               <Feather name="chevron-right" size={18} color="#8A6D1B" />
@@ -498,7 +512,10 @@ export default function BuatLaporan() {
 
           {/* Kategori */}
           <Text
-            style={[styles.label, !!galat.field.kategori_id && styles.labelGalat]}
+            style={[
+              styles.label,
+              !!galat.field.kategori_id && styles.labelGalat,
+            ]}
           >
             Kategori Masalah <Text style={styles.wajib}>*</Text>
           </Text>
@@ -510,7 +527,9 @@ export default function BuatLaporan() {
             onPress={() => setPickerOpen((o) => !o)}
             accessibilityRole="button"
             accessibilityLabel={
-              kategoriNama ? `Kategori: ${kategoriNama}` : "Pilih kategori masalah"
+              kategoriNama
+                ? `Kategori: ${kategoriNama}`
+                : "Pilih kategori masalah"
             }
             accessibilityState={{ expanded: pickerOpen }}
           >
@@ -558,7 +577,7 @@ export default function BuatLaporan() {
             </Text>
           )}
 
-          {/* Deskripsi — ketik atau suara */}
+          {/* Deskripsi, ketik atau suara */}
           <Text
             style={[
               styles.label,
@@ -677,7 +696,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   fotoTombolTeks: { color: colors.brand, fontWeight: "700", fontSize: 14 },
-  petunjuk: { fontSize: 12, color: colors.subtext, marginTop: 8, lineHeight: 17 },
+  petunjuk: {
+    fontSize: 12,
+    color: colors.subtext,
+    marginTop: 8,
+    lineHeight: 17,
+  },
   lokasiHead: {
     flexDirection: "row",
     alignItems: "center",

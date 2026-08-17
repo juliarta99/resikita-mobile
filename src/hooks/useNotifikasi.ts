@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
-  bacaNotifikasi,
-  bacaSemuaNotifikasi,
-  jumlahBelumDibaca,
+    bacaNotifikasi,
+    bacaSemuaNotifikasi,
+    jumlahBelumDibaca,
 } from "@/lib/api/notifikasi";
 
 export const KUNCI_NOTIFIKASI = ["notifikasi"] as const;
@@ -12,7 +12,7 @@ export const KUNCI_NOTIFIKASI = ["notifikasi"] as const;
  * Jeda antar-pemeriksaan jumlah notifikasi belum dibaca.
  *
  * Dua menit, bukan beberapa detik. Batas umum API ini 60 permintaan per menit,
- * dan lencana yang terlambat dua menit tidak merugikan siapa pun — sementara
+ * dan lencana yang terlambat dua menit tidak merugikan siapa pun, sementara
  * polling agresif memakan kuota data pengguna sepanjang aplikasi terbuka.
  * Angka yang tepat tetap datang saat layar notifikasi dibuka.
  */
@@ -36,8 +36,7 @@ export function useJumlahNotifikasi(aktif = true) {
 /** Aksi menandai notifikasi terbaca. */
 export function useAksiNotifikasi() {
   const qc = useQueryClient();
-  const segarkan = () =>
-    qc.invalidateQueries({ queryKey: KUNCI_NOTIFIKASI });
+  const segarkan = () => qc.invalidateQueries({ queryKey: KUNCI_NOTIFIKASI });
 
   const baca = useMutation({
     mutationFn: (id: number) => bacaNotifikasi(id),

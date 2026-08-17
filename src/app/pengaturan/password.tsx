@@ -3,15 +3,15 @@ import { useMutation } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -111,7 +111,7 @@ export default function UbahPassword() {
             {/*
               `Isian` didefinisikan di luar komponen ini dengan sengaja.
               Versi sebelumnya mendefinisikannya di dalam badan komponen,
-              sehingga setiap render menghasilkan tipe komponen baru — React
+              sehingga setiap render menghasilkan tipe komponen baru, React
               melepas lalu memasang ulang TextInput-nya, dan fokus keyboard
               hilang setiap satu huruf diketik.
             */}

@@ -2,14 +2,14 @@ import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Href, router, useLocalSearchParams } from "expo-router";
 import {
-  ActivityIndicator,
-  Image,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Image,
+    Linking,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -21,24 +21,26 @@ import { ZOOM_TITIK } from "@/constants/peta";
 import { colors, radius, spacing } from "@/constants/theme";
 import { useBottomPad } from "@/hooks/useBottomPad";
 import { ApiError } from "@/lib/api/error";
-import { detailPenugasan, mulaiPenugasan } from "@/lib/api/petugas";
+import { detailPenugasan, kirimProgresPenugasan } from "@/lib/api/petugas";
 import { confirmDialog, notify } from "@/lib/dialog";
 import { metaStatus } from "@/lib/statusLaporan";
 
-const waktuLengkap = (iso: string) =>
-  new Date(iso).toLocaleString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+const waktuLengkap = (iso: string | null) =>
+  iso
+    ? new Date(iso).toLocaleString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "waktu yang tidak tercatat";
 
 /**
  * Buka rute ke lokasi laporan di aplikasi peta perangkat.
  *
  * Memakai `google.navigation:` di Android supaya langsung masuk mode
- * berkendara — petugas yang sedang di jalan tidak perlu menekan tombol
+ * berkendara, petugas yang sedang di jalan tidak perlu menekan tombol
  * "mulai" sekali lagi. Cadangannya URL Google Maps biasa.
  */
 async function bukaRute(lat: number, lng: number) {
@@ -50,7 +52,7 @@ async function bukaRute(lat: number, lng: number) {
       return;
     }
   } catch {
-    // Perangkat tidak mengenali skema navigasi — pakai cadangan.
+    // Perangkat tidak mengenali skema navigasi, pakai cadangan.
   }
   await Linking.openURL(web);
 }
@@ -67,8 +69,18 @@ export default function DetailPenugasan() {
     enabled: Number.isFinite(nomor),
   });
 
+  /**
+   * Tidak ada endpoint `/mulai` terpisah.
+   *
+   * Satu endpoint progres melayani dua peristiwa, dibedakan `status_progres`:
+   * `"dikerjakan"` mencatat kemajuan, `"selesai"` menutup laporan induknya.
+   * Memulai penugasan berarti mencatat progres pertama, bukan memanggil aksi
+   * lain. Foto bukti hanya wajib saat menyelesaikan, jadi langkah ini boleh
+   * tanpa foto.
+   */
   const mulai = useMutation({
-    mutationFn: () => mulaiPenugasan(nomor),
+    mutationFn: () =>
+      kirimProgresPenugasan(nomor, { status_progres: "dikerjakan" }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["petugas"] });
       notify(
@@ -117,14 +129,20 @@ export default function DetailPenugasan() {
     );
   }
 
-  const p = q.data;
-  const l = p.laporan;
-  const s = metaStatus(p.status);
+  /*
+    `GET /petugas/penugasan/{laporan_id}` mengembalikan objek **Laporan**, bukan
+    pembungkus penugasan yang memuatnya. Versi sebelumnya membaca `q.data.laporan`
+    — kunci yang tidak ada di sana — sehingga seluruh isi layar ini bernilai
+    `undefined`. Nama `l` dipertahankan agar sisa berkas tidak perlu diubah.
+  */
+  const l = q.data;
+  const s = metaStatus(l.status);
   const adaKoordinat =
     Number.isFinite(l.latitude) && Number.isFinite(l.longitude);
-  const belumMulai = p.status === "ditugaskan";
-  const selesai = p.status === "selesai";
-  const foto = l.foto_url ?? [];
+  const belumMulai = l.status === "ditugaskan";
+  const selesai = l.status === "selesai";
+  // `foto` adalah array objek `{ id, url, urutan }`, bukan array URL.
+  const foto = (l.foto ?? []).map((f) => f.url);
   const progres = l.progres ?? [];
 
   return (
@@ -205,9 +223,14 @@ export default function DetailPenugasan() {
                 <View key={pr.id} style={styles.progres}>
                   <View style={styles.titik} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.progresStatus}>
-                      {metaStatus(pr.status).label}
-                    </Text>
+                    {/*
+                      Label datang dari peladen sebagai `status_label`. Kunci
+                      statusnya sendiri bernama `status_progres`, bukan `status`,
+                      dan nilainya hanya dua — `dikerjakan` atau `selesai` —
+                      sehingga tidak bisa dilewatkan ke `metaStatus` yang
+                      mengharapkan status laporan.
+                    */}
+                    <Text style={styles.progresStatus}>{pr.status_label}</Text>
                     {!!pr.catatan && (
                       <Text style={styles.progresCatatan}>{pr.catatan}</Text>
                     )}
@@ -271,7 +294,7 @@ export default function DetailPenugasan() {
         ) : (
           <Pressable
             style={styles.tombolUtama}
-            onPress={() => router.push(`/petugas/${p.id}/progres` as Href)}
+            onPress={() => router.push(`/petugas/${l.id}/progres` as Href)}
             accessibilityRole="button"
             accessibilityLabel="Catat progres penanganan"
           >

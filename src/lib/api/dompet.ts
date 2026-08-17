@@ -2,12 +2,12 @@
 
 import type { ParamsHalaman } from "@/types/api";
 import type {
-  Dompet,
-  DompetTransaksi,
-  ParamsTransaksi,
-  PayloadPenarikan,
-  PenarikanSaldo,
-  SetoranSampah,
+    Dompet,
+    DompetTransaksi,
+    ParamsTransaksi,
+    PayloadPenarikan,
+    PenarikanSaldo,
+    SetoranSampah,
 } from "@/types/dompet";
 import { get, pastikanHalaman, post } from "./client";
 
@@ -15,7 +15,7 @@ import { get, pastikanHalaman, post } from "./client";
  * Saldo, ringkasan bulan berjalan, dan `kode_qr` (§12.1).
  *
  * Endpoint ini juga **menerbitkan `kode_qr` bila belum ada**, jadi ia sekaligus
- * penjamin ketersediaan QR nasabah. Tidak ada `/dompet/qr` terpisah — layar QR
+ * penjamin ketersediaan QR nasabah. Tidak ada `/dompet/qr` terpisah, layar QR
  * cukup memanggil ini.
  */
 export const saldoDompet = () => get<Dompet>("/dompet/saldo");
@@ -35,7 +35,7 @@ export const transaksiDompet = (params?: ParamsTransaksi) =>
  * Riwayat setoran sebagai nasabah (§12.3).
  *
  * Relasi `item` ikut dimuat di daftar, jadi tidak ada endpoint detail setoran
- * terpisah — rinciannya sudah ada di tangan begitu daftarnya termuat.
+ * terpisah, rinciannya sudah ada di tangan begitu daftarnya termuat.
  */
 export const riwayatSetoran = (params?: ParamsHalaman) =>
   get<unknown>("/dompet/setoran", { params }).then((d) =>
@@ -53,7 +53,7 @@ export const riwayatPenarikan = (params?: ParamsHalaman) =>
  * **Saldo dipotong saat pengajuan dibuat**, bukan saat disetujui; bila ditolak,
  * dana kembali sebagai transaksi `refund`. Segarkan saldo setelah berhasil.
  *
- * Hanya satu pengajuan boleh menunggu dalam satu waktu — pengajuan kedua
+ * Hanya satu pengajuan boleh menunggu dalam satu waktu, pengajuan kedua
  * ditolak dengan `422` beserta penjelasannya.
  */
 export const ajukanPenarikan = (body: PayloadPenarikan) =>

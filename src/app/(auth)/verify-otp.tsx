@@ -45,7 +45,7 @@ export default function VerifyOtp() {
    *
    * `POST /auth/daftar` **sudah** mengirim kode ke email begitu akun dibuat.
    * Kalau layar ini ikut mengirim satu lagi saat dibuka, kode pertama mendadak
-   * tidak berlaku — dan pengguna yang sudah membuka emailnya mengetik kode yang
+   * tidak berlaku, dan pengguna yang sudah membuka emailnya mengetik kode yang
    * baru saja dibatalkan. Tombol di bawah untuk yang kodenya memang tidak
    * sampai, dan batasnya 6 permintaan per menit karena tiap panggilan mengirim
    * pesan sungguhan.
@@ -134,9 +134,7 @@ export default function VerifyOtp() {
           />
         </View>
         <Text style={styles.title}>
-          {kanal === "phone"
-            ? "Verifikasi WhatsApp"
-            : "Verifikasi Email"}
+          {kanal === "phone" ? "Verifikasi WhatsApp" : "Verifikasi Email"}
         </Text>
         <Text style={styles.sub}>
           {terkirim
@@ -292,7 +290,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 17,
   },
-  info: { color: colors.link, fontSize: 13, marginTop: 12, textAlign: "center" },
+  info: {
+    color: colors.link,
+    fontSize: 13,
+    marginTop: 12,
+    textAlign: "center",
+  },
   line: {
     height: 1,
     backgroundColor: colors.border,

@@ -5,7 +5,7 @@ import type { QueryClient } from "@tanstack/react-query";
  *
  * Keanggotaan tampil di lebih banyak tempat daripada yang terlihat: bilah aksi
  * di layar detail, lencana pada kartu TPS, kartu pada peta, dan daftar tagihan
- * iuran. Melewatkan salah satunya menghasilkan bug yang paling membingungkan —
+ * iuran. Melewatkan salah satunya menghasilkan bug yang paling membingungkan,
  * satu layar bilang pengguna sudah keluar, layar sebelahnya masih menampilkan
  * "Anggota".
  *

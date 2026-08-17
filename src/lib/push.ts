@@ -12,7 +12,7 @@ import type { PlatformPerangkat } from "@/types/enums";
  * Modul itu menjalankan inisialisasi saat diimpor, dan salah satu langkahnya
  * menyentuh `localStorage`. Pada render statis web (`expo export`) kode berjalan
  * di Node, `localStorage` tidak ada, dan hasilnya galat konsol di setiap halaman
- * — melanggar syarat "berjalan di web tanpa galat konsol" pada CLAUDE.md §14.
+ *, melanggar syarat "berjalan di web tanpa galat konsol" pada CLAUDE.md §14.
  *
  * Impor dinamis di dalam fungsi membuat modulnya hanya dimuat di platform yang
  * benar-benar memakainya.
@@ -132,7 +132,7 @@ export function siapkanPenangananNotifikasi(): () => void {
     /**
      * Notifikasi yang tiba saat aplikasi sedang dibuka tetap ditampilkan.
      *
-     * Perilaku bawaan menyembunyikannya — masuk akal untuk aplikasi obrolan
+     * Perilaku bawaan menyembunyikannya, masuk akal untuk aplikasi obrolan
      * yang layarnya sudah menampilkan pesan itu, tapi keliru di sini: kabar
      * bahwa laporan sudah ditangani atau setoran tercatat datang dari luar
      * layar yang sedang dilihat pengguna.

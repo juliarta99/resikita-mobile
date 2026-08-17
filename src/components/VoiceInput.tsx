@@ -1,12 +1,12 @@
 import { Feather } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import {
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    Animated,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 
 import { colors, radius, spacing } from "@/constants/theme";
@@ -20,7 +20,7 @@ type Props = {
    * Melaporkan asal isi field: `ketik` atau `suara`.
    *
    * Nilai ini dikirim ke API sebagai `deskripsi_sumber` pada laporan dan
-   * `sumber_input` pada pesan chatbot. Ia bukan detail teknis — inilah yang
+   * `sumber_input` pada pesan chatbot. Ia bukan detail teknis, inilah yang
    * membuat pemakaian fitur suara terukur, dan angkanya muncul di
    * `/publik/statistik` sebagai `persen_laporan_suara`.
    */
@@ -36,7 +36,7 @@ type Props = {
  *
  * Mewujudkan arsitektur cascaded CLAUDE.md §9: ucapan diubah jadi teks, teksnya
  * **selalu muncul di field yang bisa disunting**, baru dikirim setelah pengguna
- * puas. Itu keputusan desain, bukan keterbatasan — pengguna bisa membetulkan
+ * puas. Itu keputusan desain, bukan keterbatasan, pengguna bisa membetulkan
  * salah dengar, dan yang terkirim selalu bisa ditelusuri.
  *
  * Mengetik tetap tersedia sepenuhnya, dan tombol mikrofon menghilang tanpa
@@ -52,20 +52,29 @@ export function VoiceInput({
   tinggiMinimum = 110,
 }: Props) {
   const suara = useVoiceInput();
-  const [pernahDikte, setPernahDikte] = useState(false);
-  const denyut = useRef(new Animated.Value(1)).current;
+  /*
+    Penanda "isi field ini pernah berasal dari dikte". Disimpan sebagai ref,
+    bukan state: tidak ada satu pun bagian tampilan yang berubah karenanya, dan
+    sebagai state ia memaksa satu render tambahan pada setiap kata yang
+    ditranskripsi — tepat saat pengguna sedang berbicara dan field sedang
+    diperbarui berulang kali.
+  */
+  const pernahDikte = useRef(false);
+  // Dibaca saat render lewat `transform: [{ scale: denyut }]`, jadi ia state
+  // berinisialisasi malas, bukan isi ref. Lihat catatan yang sama di TypingDots.
+  const [denyut] = useState(() => new Animated.Value(1));
 
   // Transkrip mengalir langsung ke field. Pengguna melihat kalimatnya tumbuh
   // saat berbicara, bukan menunggu di depan layar diam.
   useEffect(() => {
     if (suara.merekam && suara.teks) {
       onUbah(suara.teks);
-      if (!pernahDikte) {
-        setPernahDikte(true);
+      if (!pernahDikte.current) {
+        pernahDikte.current = true;
         onSumberBerubah?.("suara");
       }
     }
-  }, [suara.teks, suara.merekam, onUbah, onSumberBerubah, pernahDikte]);
+  }, [suara.teks, suara.merekam, onUbah, onSumberBerubah]);
 
   // Denyut pada tombol saat merekam. Indikator visual ini diwajibkan
   // CLAUDE.md §9: tanpa tanda yang jelas, pengguna tidak tahu mikrofon hidup.
@@ -97,8 +106,8 @@ export function VoiceInput({
     // Field yang dikosongkan berarti asalnya ikut hilang; kalau tidak, laporan
     // yang seluruhnya diketik ulang akan tetap tercatat sebagai laporan suara
     // dan metrik pemakaian fiturnya jadi menggelembung.
-    if (!teks.trim() && pernahDikte) {
-      setPernahDikte(false);
+    if (!teks.trim() && pernahDikte.current) {
+      pernahDikte.current = false;
       onSumberBerubah?.("ketik");
     }
   };

@@ -1,9 +1,9 @@
 /** Notifikasi. Rujukan: API-DOCS.md §18.1–§18.4. */
 
 import type {
-  JumlahBelumDibaca,
-  Notifikasi,
-  ParamsNotifikasi,
+    JumlahBelumDibaca,
+    Notifikasi,
+    ParamsNotifikasi,
 } from "@/types/notifikasi";
 import { get, pastikanHalaman, patch, post } from "./client";
 
@@ -18,7 +18,7 @@ export const daftarNotifikasi = (params?: ParamsNotifikasi) =>
 export const jumlahBelumDibaca = () =>
   get<JumlahBelumDibaca>("/notifikasi/belum-dibaca");
 
-/** Metodenya `PATCH`, dan pathnya berakhir `/dibaca` — bukan `PUT .../baca`. */
+/** Metodenya `PATCH`, dan pathnya berakhir `/dibaca`, bukan `PUT .../baca`. */
 export const bacaNotifikasi = (id: number) =>
   patch<Notifikasi>(`/notifikasi/${id}/dibaca`);
 

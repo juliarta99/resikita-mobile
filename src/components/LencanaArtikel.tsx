@@ -5,7 +5,7 @@ import { labelTipe, namaKategori } from "@/lib/artikel";
 import type { KategoriArtikel } from "@/types/artikel";
 
 /**
- * Cukup longgar untuk menerima artikel bentuk ringkas maupun detail — dua-
+ * Cukup longgar untuk menerima artikel bentuk ringkas maupun detail, dua-
  * duanya punya `tipe`, dan `kategori`-nya berbeda bentuk saja.
  */
 type ArtikelBerlencana = {
@@ -27,7 +27,7 @@ type Props = {
  * Lencana kategori dan tipe sebuah artikel.
  *
  * Keduanya menjawab pertanyaan yang berbeda: kategori menjawab "tentang apa",
- * tipe menjawab "berbentuk apa" — panduan langkah demi langkah dibaca berbeda
+ * tipe menjawab "berbentuk apa", panduan langkah demi langkah dibaca berbeda
  * dari jurnal, dan pembaca berhak tahu sebelum membukanya. Disatukan di satu
  * komponen supaya beranda dan halaman edukasi tidak bisa lagi menampilkan
  * kelengkapan yang berbeda untuk artikel yang sama.
@@ -36,7 +36,7 @@ export function LencanaArtikel({ a, varian = "lembut" }: Props) {
   const kategori = namaKategori(a.kategori);
   const tipe = labelTipe(a);
 
-  // Tanpa keduanya, barisnya tidak digambar sama sekali — bukan digambar
+  // Tanpa keduanya, barisnya tidak digambar sama sekali, bukan digambar
   // kosong. Inilah yang dulu menyisakan kotak berwarna tanpa teks.
   if (!kategori && !tipe) return null;
 
@@ -46,10 +46,16 @@ export function LencanaArtikel({ a, varian = "lembut" }: Props) {
     <View style={styles.baris}>
       {!!kategori && (
         <View
-          style={[styles.pil, pekat ? styles.kategoriPekat : styles.kategoriLembut]}
+          style={[
+            styles.pil,
+            pekat ? styles.kategoriPekat : styles.kategoriLembut,
+          ]}
         >
           <Text
-            style={[styles.teks, pekat ? styles.teksPekat : styles.teksKategori]}
+            style={[
+              styles.teks,
+              pekat ? styles.teksPekat : styles.teksKategori,
+            ]}
             numberOfLines={1}
           >
             {kategori}

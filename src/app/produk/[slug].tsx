@@ -3,13 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { type Href, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -24,6 +24,7 @@ import { ApiError } from "@/lib/api/error";
 import { detailProduk, ulasanProduk } from "@/lib/api/produk";
 import { notify } from "@/lib/dialog";
 import { formatRupiah } from "@/lib/rupiah";
+import { urlMedia } from "@/lib/media";
 
 export default function DetailProduk() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -101,7 +102,7 @@ export default function DetailProduk() {
   // dasar mengaktifkan tombol beli.
   const habis = !p.tersedia;
   const maksimal = Math.max(1, Math.min(p.stok, 99));
-  // Endpoint detail tidak mengirim `foto_utama_url` — sampulnya diambil dari
+  // Endpoint detail tidak mengirim `foto_utama_url`, sampulnya diambil dari
   // elemen `foto` yang bertanda `is_utama`.
   const foto = p.foto ?? [];
   const sampul = foto.find((f) => f.is_utama) ?? foto[0];
@@ -110,7 +111,7 @@ export default function DetailProduk() {
    * Menambah produk dari toko mana pun tidak lagi perlu mengosongkan keranjang.
    *
    * Peladen mengelompokkan keranjang per toko, jadi aturan "satu pesanan satu
-   * UMKM" ditegakkan saat checkout — bukan saat menambah. Versi sebelumnya
+   * UMKM" ditegakkan saat checkout, bukan saat menambah. Versi sebelumnya
    * menanyakan "ganti isi keranjang?" setiap kali pengguna melirik produk dari
    * penjual lain; itu memaksakan batasan pesanan ke tempat yang salah.
    */
@@ -145,7 +146,7 @@ export default function DetailProduk() {
         <View style={styles.hero}>
           {sampul ? (
             <Image
-              source={{ uri: sampul.url }}
+              source={{ uri: urlMedia(sampul.url) }}
               style={StyleSheet.absoluteFill}
               resizeMode="cover"
               accessibilityIgnoresInvertColors
@@ -165,7 +166,7 @@ export default function DetailProduk() {
             {foto.map((f, i) => (
               <Image
                 key={f.id}
-                source={{ uri: f.url }}
+                source={{ uri: urlMedia(f.url) }}
                 style={styles.galeriFoto}
                 accessibilityIgnoresInvertColors
                 accessibilityLabel={`Foto ${i + 1} dari ${foto.length}`}
@@ -224,7 +225,7 @@ export default function DetailProduk() {
               <View style={styles.tokoIkon}>
                 {p.umkm.foto_url ? (
                   <Image
-                    source={{ uri: p.umkm.foto_url }}
+                    source={{ uri: urlMedia(p.umkm.foto_url) }}
                     style={styles.tokoLogo}
                     accessibilityIgnoresInvertColors
                   />
@@ -326,7 +327,10 @@ export default function DetailProduk() {
         </View>
 
         <Pressable
-          style={[styles.tambah, (habis || keranjang.sedangUbah) && styles.tambahMati]}
+          style={[
+            styles.tambah,
+            (habis || keranjang.sedangUbah) && styles.tambahMati,
+          ]}
           onPress={tambah}
           disabled={habis || keranjang.sedangUbah}
           accessibilityRole="button"
@@ -380,7 +384,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  /** Lencana jumlah barang — bentuknya sama dengan yang di tab Pasar. */
+  /** Lencana jumlah barang, bentuknya sama dengan yang di tab Pasar. */
   lencana: {
     position: "absolute",
     top: 4,

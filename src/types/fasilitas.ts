@@ -2,10 +2,10 @@
 
 import type { IsoDateTime, ParamsHalaman, ParamsLokasi, Rupiah } from "./api";
 import type {
-  JenisTps,
-  KategoriSampah,
-  MetodeBayar,
-  StatusIuran,
+    JenisTps,
+    KategoriSampah,
+    MetodeBayar,
+    StatusIuran,
 } from "./enums";
 import type { Wilayah } from "./wilayah";
 
@@ -14,7 +14,7 @@ import type { Wilayah } from "./wilayah";
  *
  * Satu kunci untuk dua sumber berbeda: `tps` dan `tps3r` berasal dari tabel
  * TPS, `bank_sampah` dari tabel bank sampah. Cukup untuk memilih ikon peta,
- * tapi **bukan** penanda tabel asal — jangan memakainya untuk memilih endpoint
+ * tapi **bukan** penanda tabel asal, jangan memakainya untuk memilih endpoint
  * detail.
  */
 export const JENIS_FASILITAS = ["bank_sampah", "tps", "tps3r"] as const;
@@ -46,9 +46,9 @@ export type BankSampah = {
   status_label: string;
   is_verified: boolean;
   wilayah?: Wilayah | null;
-  /** Bersyarat — hanya pada daftar. */
+  /** Bersyarat, hanya pada daftar. */
   jumlah_jenis_harga?: number;
-  /** Bersyarat — hanya bila permintaan mengirim koordinat. */
+  /** Bersyarat, hanya bila permintaan mengirim koordinat. */
   jarak_km?: number;
 };
 
@@ -57,7 +57,7 @@ export type BankSampah = {
  *
  * Katalog ini **per unit, bukan global.** Dua bank sampah boleh menghargai
  * jenis yang sama dengan angka berbeda, jadi layar mana pun yang menampilkan
- * harga harus lebih dulu tahu unit mana yang sedang dirujuk — menampilkan angka
+ * harga harus lebih dulu tahu unit mana yang sedang dirujuk, menampilkan angka
  * dari unit lain sama saja menjanjikan harga yang tidak akan pengguna terima.
  */
 export type BankSampahHarga = {
@@ -70,7 +70,7 @@ export type BankSampahHarga = {
   satuan: string;
   harga_per_satuan: Rupiah;
   is_active: boolean;
-  /** Relasi — dimuat pada `/harga-sampah`, tidak pada detail bank sampah. */
+  /** Relasi, dimuat pada `/harga-sampah`, tidak pada detail bank sampah. */
   bank_sampah?: BankSampah | null;
 };
 
@@ -131,7 +131,7 @@ export type TpsIuran = {
 /**
  * Bentuk `data` pada `GET /tps/keanggotaan-saya` (§13.1).
  *
- * `null` berarti pengguna belum menjadi anggota TPS mana pun — itu keadaan
+ * `null` berarti pengguna belum menjadi anggota TPS mana pun, itu keadaan
  * normal, **bukan** galat. Bedakan dari `404` dengan memeriksa `success`, bukan
  * keberadaan `data`.
  */

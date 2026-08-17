@@ -4,16 +4,16 @@ import * as ImagePicker from "expo-image-picker";
 import { type Href, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -23,6 +23,7 @@ import { colors, radius, spacing } from "@/constants/theme";
 import { ApiError } from "@/lib/api/error";
 import { detailPesanan, kirimUlasan } from "@/lib/api/pesanan";
 import { notify } from "@/lib/dialog";
+import { urlMedia } from "@/lib/media";
 
 const LABEL_BINTANG = [
   "",
@@ -51,7 +52,11 @@ export default function BeriUlasan() {
 
   const kirim = useMutation({
     mutationFn: () =>
-      kirimUlasan(kode, { rating, komentar: komentar.trim() || undefined }, foto ?? undefined),
+      kirimUlasan(
+        kode,
+        { rating, komentar: komentar.trim() || undefined },
+        foto ?? undefined,
+      ),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["pesanan"] });
       await qc.invalidateQueries({ queryKey: ["produk"] });
@@ -136,19 +141,20 @@ export default function BeriUlasan() {
             Itu yang ditetapkan kontrak (`POST /pesanan/{kode}/ulasan` menerima
             satu `rating` dan satu `komentar`), sementara versi sebelumnya
             mengirim larik ulasan per produk. Daftar produk di bawah ditampilkan
-            supaya pengguna tahu persis apa yang sedang ia nilai — kalau ternyata
+            supaya pengguna tahu persis apa yang sedang ia nilai, kalau ternyata
             penilaian memang harus per produk, layar ini yang berubah, bukan
             kontraknya yang ditambal di klien. Lihat catatan T6.
           */}
           <View style={styles.kartu}>
             <Text style={styles.kartuJudul}>Anda menilai pesanan</Text>
             <Text style={styles.kode}>{p.kode}</Text>
-            {p.items.map((it) => (
+            {/* Kuncinya `item`, bukan `items`, dan fotonya `foto_utama_url`. */}
+            {(p.item ?? []).map((it) => (
               <View key={it.id} style={styles.item}>
                 <View style={styles.gambar}>
-                  {it.produk.foto_url ? (
+                  {it.produk?.foto_utama_url ? (
                     <Image
-                      source={{ uri: it.produk.foto_url }}
+                      source={{ uri: urlMedia(it.produk.foto_utama_url) }}
                       style={styles.gambarIsi}
                       accessibilityIgnoresInvertColors
                     />
@@ -156,8 +162,9 @@ export default function BeriUlasan() {
                     <Feather name="image" size={18} color="#CBD5E1" />
                   )}
                 </View>
+                {/* Nama snapshot saat pesanan dibuat, bukan nama produk hari ini. */}
                 <Text style={styles.itemNama} numberOfLines={2}>
-                  {it.produk.nama}
+                  {it.nama}
                 </Text>
                 <Text style={styles.itemQty}>×{it.qty}</Text>
               </View>
@@ -173,7 +180,7 @@ export default function BeriUlasan() {
                   onPress={() => setRating(n)}
                   style={styles.bintangTombol}
                   accessibilityRole="radio"
-                  accessibilityLabel={`${n} bintang — ${LABEL_BINTANG[n]}`}
+                  accessibilityLabel={`${n} bintang, ${LABEL_BINTANG[n]}`}
                   accessibilityState={{ selected: rating === n }}
                 >
                   <Feather
@@ -184,11 +191,10 @@ export default function BeriUlasan() {
                 </Pressable>
               ))}
             </View>
-            <Text
-              style={styles.bintangLabel}
-              accessibilityLiveRegion="polite"
-            >
-              {rating > 0 ? LABEL_BINTANG[rating] : "Ketuk bintang untuk menilai"}
+            <Text style={styles.bintangLabel} accessibilityLiveRegion="polite">
+              {rating > 0
+                ? LABEL_BINTANG[rating]
+                : "Ketuk bintang untuk menilai"}
             </Text>
           </View>
 
@@ -207,7 +213,7 @@ export default function BeriUlasan() {
             {foto ? (
               <View style={styles.fotoWrap}>
                 <Image
-                  source={{ uri: foto }}
+                  source={{ uri: urlMedia(foto) }}
                   style={styles.foto}
                   accessibilityIgnoresInvertColors
                   accessibilityLabel="Foto yang dilampirkan pada ulasan"

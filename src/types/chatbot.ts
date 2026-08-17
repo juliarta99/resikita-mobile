@@ -8,11 +8,11 @@ export type PesanChat = {
   /** `model` adalah balasan asisten. */
   role: PeranChat;
   /**
-   * Teks polos. Tanpa judul markdown, tabel, atau blok kode — sengaja, supaya
+   * Teks polos. Tanpa judul markdown, tabel, atau blok kode, sengaja, supaya
    * aman langsung disuapkan ke TTS tanpa pembersihan tambahan.
    */
   konten: string;
-  /** `null` pada balasan model — hanya pesan pengguna yang punya asal masukan. */
+  /** `null` pada balasan model, hanya pesan pengguna yang punya asal masukan. */
   sumber_input: SumberInput | null;
   dibacakan: boolean;
   created_at: IsoDateTime | null;
@@ -24,9 +24,9 @@ export type SesiChat = {
   judul: string;
   /** Nama lengkap wilayah yang jadi konteks jawaban. */
   wilayah_konteks?: string | null;
-  /** Bersyarat — hanya pada daftar sesi. */
+  /** Bersyarat, hanya pada daftar sesi. */
   jumlah_pesan?: number;
-  /** Relasi — hanya pada detail sesi, terurut dari yang terlama. */
+  /** Relasi, hanya pada detail sesi, terurut dari yang terlama. */
   pesan?: PesanChat[];
   terakhir_at: IsoDateTime | null;
   created_at: IsoDateTime | null;
@@ -35,7 +35,7 @@ export type SesiChat = {
 /**
  * Body `POST /chatbot/pesan` (§11.1).
  *
- * `sesi_id` **dikosongkan pada pesan pertama** — sesinya dibuat peladen dan
+ * `sesi_id` **dikosongkan pada pesan pertama**, sesinya dibuat peladen dan
  * id-nya ikut di balasan, jadi layar percakapan baru tidak perlu dua
  * pemanggilan untuk mulai.
  *
@@ -55,7 +55,7 @@ export type HasilPesanChat = {
   sesi_id: number;
   judul_sesi: string;
   /**
-   * **Hanya balasan asisten.** Pesan pengguna tidak dikembalikan — tampilkan
+   * **Hanya balasan asisten.** Pesan pengguna tidak dikembalikan, tampilkan
    * dari state lokal.
    */
   pesan: PesanChat;

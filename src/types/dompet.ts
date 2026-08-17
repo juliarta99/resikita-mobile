@@ -2,7 +2,11 @@
 
 import type { IsoDateTime, ParamsHalaman, Rupiah } from "./api";
 import type { PenggunaRingkas } from "./auth";
-import type { StatusPenarikan, StatusSetoran, TipeTransaksiDompet } from "./enums";
+import type {
+    StatusPenarikan,
+    StatusSetoran,
+    TipeTransaksiDompet,
+} from "./enums";
 import type { BankSampah } from "./fasilitas";
 
 /** Respons `GET /dompet/saldo` (§12.1). */
@@ -11,7 +15,7 @@ export type Dompet = {
   /**
    * ULID 26 karakter, **dibuat otomatis bila belum ada**.
    *
-   * Karena itu endpoint ini aman dipanggil sebagai penjamin ketersediaan QR —
+   * Karena itu endpoint ini aman dipanggil sebagai penjamin ketersediaan QR,
    * tidak ada endpoint terpisah untuk menerbitkannya. Isinya acak, bukan NIK.
    */
   kode_qr: string;

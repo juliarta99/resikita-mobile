@@ -21,7 +21,7 @@ export default function QrNasabah() {
    * Tidak ada endpoint `/dompet/qr`: endpoint saldo itulah yang menerbitkan
    * `kode_qr` bila akun belum punya, sehingga memanggilnya sekaligus menjamin
    * kodenya ada. Cadangan dari profil yang membuat layar ini tetap berguna saat
-   * sinyal hilang — dan justru di depan meja petugas bank sampah, di dalam
+   * sinyal hilang, dan justru di depan meja petugas bank sampah, di dalam
    * gudang berdinding seng, sinyal sering tidak ada.
    */
   const q = useQuery({
@@ -54,7 +54,7 @@ export default function QrNasabah() {
           <View style={styles.kartu}>
             {/*
               QR digambar di perangkat memakai react-native-qrcode-svg.
-              Versi sebelumnya mengambil gambar dari api.qrserver.com — itu
+              Versi sebelumnya mengambil gambar dari api.qrserver.com, itu
               berarti mengirim identitas nasabah ke layanan pihak ketiga setiap
               kali layar dibuka, dan kodenya tidak muncul sama sekali tanpa
               internet. Keduanya masalah nyata di tempat setoran terjadi.

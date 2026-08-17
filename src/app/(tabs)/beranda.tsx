@@ -1,23 +1,21 @@
 import KartuArtikel from "@/components/KartuArtikel";
 import { colors, radius, spacing } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
-import { evaluate, Stats } from "@/lib/achievements";
 import { useJumlahNotifikasi } from "@/hooks/useNotifikasi";
 import { useStatistikSaya } from "@/hooks/useStatistikSaya";
+import { evaluate, Stats } from "@/lib/achievements";
 import { daftarArtikel } from "@/lib/api/artikel";
-import { statistikPublik } from "@/lib/api/publik";
-import { notify } from "@/lib/dialog";
 import { formatRupiah } from "@/lib/rupiah";
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -38,7 +36,6 @@ const initials = (name: string) =>
 
 export default function Beranda() {
   const { user } = useAuth();
-  const soon = () => notify("Segera", "Fitur ini akan segera hadir.");
   const enabled = !!user;
 
   const stat = useStatistikSaya(enabled);
@@ -48,19 +45,6 @@ export default function Beranda() {
     queryKey: ["artikel", "unggulan"],
     queryFn: () => daftarArtikel({ unggulan: true, per_page: 3 }),
     staleTime: 10 * 60_000,
-  });
-
-  /**
-   * Statistik nasional untuk tamu maupun pengguna terdaftar.
-   *
-   * Peladen men-cache-nya 15 menit, jadi `staleTime` di sini mengikuti angka
-   * yang sama — memanggil lebih sering hanya menghabiskan kuota untuk jawaban
-   * yang identik.
-   */
-  const publikQ = useQuery({
-    queryKey: ["publik", "statistik"],
-    queryFn: statistikPublik,
-    staleTime: 15 * 60_000,
   });
 
   const stats: Stats = {
@@ -243,13 +227,13 @@ export default function Beranda() {
     Empat angka dihapus dari kartu ini: berat sampah, CO₂ tersimpan, setara
     pohon, dan tren persen bulan ini vs bulan lalu.
 
-    Keempatnya dihitung dari `GET /setoran` **halaman pertama saja** — pengguna
+    Keempatnya dihitung dari `GET /setoran` **halaman pertama saja**, pengguna
     dengan 200 setoran melihat angka yang berasal dari 15 di antaranya. Salah,
     tapi tampak presisi, dan itu gabungan terburuk. Tidak ada endpoint yang
     mengembalikan akumulasi berat setoran (catatan T18); begitu peladen
     menyediakannya, keempatnya bisa kembali dengan angka yang benar.
 
-    Yang menggantikan: jumlah setoran, laporan, dan sampah terpindai — semuanya
+    Yang menggantikan: jumlah setoran, laporan, dan sampah terpindai, semuanya
     dari `meta.total`, yang memang jumlah sebenarnya di peladen.
   */
 

@@ -2,12 +2,12 @@ import { Feather } from "@expo/vector-icons";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -25,7 +25,7 @@ import type { StatusPenarikan } from "@/types/enums";
  * Ikon tiap status penarikan.
  *
  * Hanya ikonnya yang ditentukan di sini. Label dan warnanya datang dari peladen
- * lewat `status_label` dan `status_warna` — versi sebelumnya menyimpan tabel
+ * lewat `status_label` dan `status_warna`, versi sebelumnya menyimpan tabel
  * status sendiri lengkap dengan daftar ejaan yang "masuk akal", dan menampilkan
  * nilai enum mentah begitu peladen memakai kata yang tidak ada di daftar itu.
  */
@@ -136,16 +136,14 @@ function Kartu({ p }: { p: PenarikanSaldo }) {
 
       <View style={styles.rekening}>
         <Feather name="credit-card" size={14} color={colors.subtext} />
-        {/* Nomor rekening sudah disamarkan peladen — menyamarkannya lagi di
+        {/* Nomor rekening sudah disamarkan peladen, menyamarkannya lagi di
             sini akan memakan justru empat digit terakhir yang berguna. */}
         <Text style={styles.rekeningTeks}>
           {[p.nama_bank, p.no_rekening].filter(Boolean).join(" · ")}
         </Text>
       </View>
       <Text style={styles.atasNama}>a.n. {p.atas_nama}</Text>
-      {!!p.catatan && (
-        <Text style={styles.catatan}>{p.catatan}</Text>
-      )}
+      {!!p.catatan && <Text style={styles.catatan}>{p.catatan}</Text>}
       {!!waktu && <Text style={styles.waktu}>{waktu}</Text>}
     </View>
   );

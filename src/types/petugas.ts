@@ -3,10 +3,10 @@
  *
  * Seluruh endpoint di sini dijaga middleware role `petugas`; role lain menerima
  * `403` tanpa perlu melihat isinya. Gerbang di klien hanya menentukan apa yang
- * tampak, bukan apa yang diizinkan — pakai `user.role === "petugas"`.
+ * tampak, bukan apa yang diizinkan, pakai `user.role === "petugas"`.
  *
  * Cakupan datanya otomatis terbatas pada penugasan milik petugas yang sedang
- * masuk. Klien tidak perlu — dan tidak bisa — mengirim `petugas_id`.
+ * masuk. Klien tidak perlu, dan tidak bisa, mengirim `petugas_id`.
  */
 
 import type { ParamsHalaman } from "./api";
@@ -30,7 +30,7 @@ export type ParamsPenugasan = ParamsHalaman & {
  * `/mulai` maupun `/selesai` terpisah.
  *
  * `foto_bukti` ditangani terpisah oleh pemanggil dan **wajib** saat
- * menyelesaikan — divalidasi dua kali di peladen, jadi mengirimkannya tanpa
+ * menyelesaikan, divalidasi dua kali di peladen, jadi mengirimkannya tanpa
  * foto akan gagal dengan pasti.
  */
 export type FieldProgresPenugasan = {

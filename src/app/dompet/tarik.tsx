@@ -3,15 +3,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -23,7 +23,7 @@ import { notify } from "@/lib/dialog";
 import { formatRupiah } from "@/lib/rupiah";
 
 /**
- * Nominal cepat — saran tampilan, bukan aturan.
+ * Nominal cepat, saran tampilan, bukan aturan.
  *
  * Batas minimum penarikan **tidak** ditetapkan di sini. Versi sebelumnya
  * menanam `MIN = 50000` dan menolak permintaan sebelum sampai ke peladen; kalau

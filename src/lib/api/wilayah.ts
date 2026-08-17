@@ -1,17 +1,17 @@
 /**
  * Wilayah dan pengajuan wilayah. Rujukan: API-DOCS.md §5.
  *
- * Seluruh endpoint di sini terbuka tanpa token — layar pendaftaran perlu
+ * Seluruh endpoint di sini terbuka tanpa token, layar pendaftaran perlu
  * memilih domisili sebelum akunnya ada, dan formulir pengajuan wilayah dipakai
  * pejabat daerah yang justru belum punya akun.
  */
 
 import type {
-  ParamsCariWilayah,
-  ParamsWilayah,
-  ParamsWilayahTerdekat,
-  ResolusiWilayah,
-  Wilayah,
+    ParamsCariWilayah,
+    ParamsWilayah,
+    ParamsWilayahTerdekat,
+    ResolusiWilayah,
+    Wilayah,
 } from "@/types/wilayah";
 import { get, pastikanHalaman, pastikanLarik, post } from "./client";
 
@@ -25,7 +25,7 @@ export const daftarProvinsi = () =>
  * Anak langsung dari satu wilayah.
  *
  * Inilah satu-satunya cara memuat tingkat di bawahnya. Data desa seluruh
- * Indonesia sekitar 84.000 baris — memuatnya sekaligus bukan sekadar lambat,
+ * Indonesia sekitar 84.000 baris, memuatnya sekaligus bukan sekadar lambat,
  * ia akan menghabiskan memori perangkat kelas bawah.
  */
 export const anakWilayah = (id: number) =>
@@ -57,7 +57,7 @@ export const wilayahTerdekat = (params: ParamsWilayahTerdekat) =>
  * dari apa yang tersimpan.
  *
  * `ditemukan: false` dengan keempat kunci `null` berarti titik itu di luar
- * jangkauan data wilayah. Laporan dari sana tetap boleh dikirim — penanganannya
+ * jangkauan data wilayah. Laporan dari sana tetap boleh dikirim, penanganannya
  * jatuh ke fasilitator wilayah.
  */
 export const resolusiWilayah = (latitude: number, longitude: number) =>

@@ -2,26 +2,26 @@ import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { type Href, router, useLocalSearchParams } from "expo-router";
 import {
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Linking,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import BottomBar from "@/components/BottomBar";
 import KategoriBadge from "@/components/KategoriBadge";
 import LeafletMap from "@/components/LeafletMap";
-import BottomBar from "@/components/BottomBar";
 import ErrorState from "@/components/states/ErrorState";
 import LoadingState from "@/components/states/LoadingState";
 import { ZOOM_TITIK } from "@/constants/peta";
 import { colors, radius, spacing } from "@/constants/theme";
 import { useBottomPad } from "@/hooks/useBottomPad";
 import { detailBankSampah } from "@/lib/api/fasilitas";
-import { formatRupiah } from "@/lib/rupiah";
 import { metaKategori } from "@/lib/kategoriSampah";
+import { formatRupiah } from "@/lib/rupiah";
 import { KATEGORI_SAMPAH } from "@/types/enums";
 import type { BankSampahHarga } from "@/types/fasilitas";
 
@@ -47,13 +47,13 @@ export default function DetailBankSampah() {
   /**
    * Satu permintaan untuk dua hal.
    *
-   * Katalog harga ikut di dalam respons detail (§8.4) — tidak ada endpoint
+   * Katalog harga ikut di dalam respons detail (§8.4), tidak ada endpoint
    * harga per unit yang terpisah. Versi sebelumnya memanggil endpoint kedua
    * yang tidak pernah ada, sehingga katalognya selalu berakhir sebagai
    * "gagal dimuat" meski datanya sebenarnya sudah ada di tangan.
    *
    * Inilah perubahan terbesar pada Resikita: harga tidak lagi berlaku
-   * nasional. Menampilkannya di layar detail — bukan di dompet — memastikan
+   * nasional. Menampilkannya di layar detail, bukan di dompet, memastikan
    * angka yang dilihat pengguna adalah angka yang benar-benar ia terima di
    * tempat ia menyetor.
    */
@@ -208,7 +208,7 @@ export default function DetailBankSampah() {
 }
 
 function BarisHarga({ h }: { h: BankSampahHarga }) {
-  // Satuannya datang dari peladen dan tidak selalu kilogram — beberapa unit
+  // Satuannya datang dari peladen dan tidak selalu kilogram, beberapa unit
   // membeli per buah atau per lembar. Menanam "kg" di sini akan salah harga.
   const satuan = h.satuan || "kg";
   return (

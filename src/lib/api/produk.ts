@@ -2,18 +2,18 @@
 
 import type { ParamsHalaman } from "@/types/api";
 import type {
-  KategoriProduk,
-  Keranjang,
-  OpsiOngkir,
-  ParamsProduk,
-  ParamsUmkm,
-  PayloadKeranjang,
-  PayloadOngkir,
-  Produk,
-  RingkasKeranjang,
-  TujuanOngkir,
-  Ulasan,
-  Umkm,
+    KategoriProduk,
+    Keranjang,
+    OpsiOngkir,
+    ParamsProduk,
+    ParamsUmkm,
+    PayloadKeranjang,
+    PayloadOngkir,
+    Produk,
+    RingkasKeranjang,
+    TujuanOngkir,
+    Ulasan,
+    Umkm,
 } from "@/types/produk";
 import { del, get, pastikanHalaman, pastikanLarik, post, put } from "./client";
 
@@ -22,7 +22,7 @@ import { del, get, pastikanHalaman, pastikanLarik, post, put } from "./client";
 /**
  * Daftar UMKM.
  *
- * Pathnya di bawah prefix `/direktori`, sama seperti TPS dan bank sampah —
+ * Pathnya di bawah prefix `/direktori`, sama seperti TPS dan bank sampah,
  * `/umkm` telanjang tidak pernah ada dan menjawab `404`, yang di layar tampak
  * seperti "belum ada UMKM terdaftar" alih-alih seperti salah alamat.
  */
@@ -78,7 +78,7 @@ export const tambahKeKeranjang = (body: PayloadKeranjang) =>
   post<RingkasKeranjang>("/keranjang", body);
 
 /**
- * Ubah kuantitas — `qty` **menimpa** nilai lama.
+ * Ubah kuantitas, `qty` **menimpa** nilai lama.
  *
  * Dikirim ke `/keranjang` tanpa id di path: yang dipakai peladen untuk mencari
  * barisnya adalah `produk_id` di badan, bukan id baris keranjang.
@@ -89,7 +89,7 @@ export const ubahQtyKeranjang = (body: PayloadKeranjang) =>
 /**
  * Keluarkan satu produk.
  *
- * **Kunci URL-nya slug produk** — bukan id baris keranjang, bukan id produk.
+ * **Kunci URL-nya slug produk**, bukan id baris keranjang, bukan id produk.
  * Ketiganya angka atau teks yang mirip, dan salah satu di antaranya menghasilkan
  * `404` yang tampak seperti "produk sudah terhapus".
  */
@@ -104,12 +104,12 @@ export const kosongkanKeranjang = () => del<null>("/keranjang");
  * Cari alamat tujuan pengiriman.
  *
  * Query-nya bernama `cari`, minimal 3 huruf. Nama query yang keliru tidak
- * ditolak peladen — ia hanya diabaikan, pencariannya berjalan tanpa kata kunci,
+ * ditolak peladen, ia hanya diabaikan, pencariannya berjalan tanpa kata kunci,
  * dan hasilnya kosong. Itulah yang dulu tampil sebagai "lokasi tidak ditemukan"
  * untuk kata kunci yang sebenarnya benar.
  *
  * Hasilnya diteruskan apa adanya dari RajaOngkir V2 dan di-cache satu hari di
- * peladen. `503` berarti penyedianya sedang mati, bukan alamatnya tidak ada —
+ * peladen. `503` berarti penyedianya sedang mati, bukan alamatnya tidak ada,
  * bedakan keduanya saat menampilkan pesan.
  */
 export const cariTujuanOngkir = (cari: string) =>

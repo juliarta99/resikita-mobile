@@ -13,7 +13,7 @@ const ROLE_PETUGAS = "petugas";
 /**
  * Gerbang area petugas.
  *
- * Ini gerbang **tampilan**, bukan gerbang keamanan — peladen tetap memeriksa
+ * Ini gerbang **tampilan**, bukan gerbang keamanan, peladen tetap memeriksa
  * role pada setiap permintaan dan menjawab `403` bila tidak berwenang. Yang
  * dilakukan di sini hanya mencegah warga biasa tersesat ke layar yang seluruh
  * isinya akan gagal dimuat, dan memberi penjelasan alih-alih deretan galat.

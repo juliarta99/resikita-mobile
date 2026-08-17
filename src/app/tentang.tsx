@@ -2,12 +2,12 @@ import { colors, radius, spacing } from "@/constants/theme";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -48,7 +48,7 @@ export default function Tentang() {
           <Text style={styles.p}>
             Dengan dukungan teknologi AI dan jaringan Bank Sampah, kami membantu
             mengubah kebiasaan memilah sampah menjadi kontribusi nyata bagi
-            lingkungan yang lebih bersih dan hijau — dari desa hingga kota.
+            lingkungan yang lebih bersih dan hijau, dari desa hingga kota.
           </Text>
         </View>
 

@@ -1,18 +1,12 @@
 import { colors, radius, spacing } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
-import { evaluate, EvaluatedAchievement, Stats } from "@/lib/achievements";
 import { useStatistikSaya } from "@/hooks/useStatistikSaya";
+import { evaluate, EvaluatedAchievement } from "@/lib/achievements";
 import { confirmDialog } from "@/lib/dialog";
 import { formatRupiah } from "@/lib/rupiah";
 import { Feather } from "@expo/vector-icons";
 import { type Href, router } from "expo-router";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const initials = (name: string) =>
@@ -97,7 +91,7 @@ export default function Profil() {
     );
   }
 
-  // `Alert.alert` dengan tombol tidak menampilkan tombolnya di web — pengguna
+  // `Alert.alert` dengan tombol tidak menampilkan tombolnya di web, pengguna
   // menekan "Keluar" dan tidak terjadi apa pun. `confirmDialog` menangani
   // keduanya.
   const keluar = async () => {
@@ -253,9 +247,7 @@ export default function Profil() {
           <Text style={styles.logoutText}>Keluar</Text>
         </Pressable>
 
-        <Text style={styles.footer}>
-          Resikita
-        </Text>
+        <Text style={styles.footer}>Resikita</Text>
         <Text style={styles.footerVer}>Resikita v1.0.0</Text>
       </ScrollView>
     </SafeAreaView>

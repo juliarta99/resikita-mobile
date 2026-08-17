@@ -3,13 +3,13 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -36,12 +36,12 @@ export default function DaftarTps() {
    * Disaring ke wilayah pengguna bila domisilinya sudah diisi.
    *
    * Tanpa penyaring itu, warga di Papua menerima halaman pertama berisi TPS di
-   * Jawa — daftar nasional tanpa konteks lokasi hampir tidak ada gunanya.
+   * Jawa, daftar nasional tanpa konteks lokasi hampir tidak ada gunanya.
    * Ketika wilayah belum diisi, daftarnya tetap tampil apa adanya dan ada
    * ajakan melengkapi profil.
    */
   // `user.wilayah` sudah berupa satu wilayah tingkat desa (§3.3), bukan
-  // rangkaian bertingkat — tidak ada kunci `.desa` di dalamnya.
+  // rangkaian bertingkat, tidak ada kunci `.desa` di dalamnya.
   const wilayahId = user?.wilayah?.id;
 
   const q = useInfiniteQuery({
@@ -52,7 +52,7 @@ export default function DaftarTps() {
         wilayah_id: wilayahId,
         // Penyaring teksnya bernama `cari` di seluruh direktori (§8.1); `q`
         // hanya dipakai `GET /wilayah/cari`, dan query tak dikenal diabaikan
-        // diam-diam — jadi pencariannya dulu tidak melakukan apa pun.
+        // diam-diam, jadi pencariannya dulu tidak melakukan apa pun.
         cari: cariTertunda.trim() || undefined,
       }),
     initialPageParam: 1,
@@ -108,8 +108,8 @@ export default function DaftarTps() {
         >
           <Feather name="map-pin" size={16} color="#8A6D1B" />
           <Text style={styles.ajakanTeks}>
-            Lengkapi domisili di profil agar daftar ini menampilkan TPS di sekitar
-            Anda.
+            Lengkapi domisili di profil agar daftar ini menampilkan TPS di
+            sekitar Anda.
           </Text>
           <Feather name="chevron-right" size={16} color="#8A6D1B" />
         </Pressable>
@@ -204,7 +204,9 @@ function KartuTps({ t, anggota }: { t: Tps; anggota: boolean }) {
         t.nama,
         anggota ? "Anda anggota di sini" : null,
         t.jenis_label,
-        tarif != null ? `iuran ${formatRupiah(tarif)} per bulan` : "tanpa iuran",
+        tarif != null
+          ? `iuran ${formatRupiah(tarif)} per bulan`
+          : "tanpa iuran",
       ]
         .filter(Boolean)
         .join(", ")}
@@ -226,7 +228,7 @@ function KartuTps({ t, anggota }: { t: Tps; anggota: boolean }) {
           </Text>
         )}
         <View style={styles.metaBaris}>
-          {/* Lencana keanggotaan didahulukan — ia menjawab pertanyaan yang
+          {/* Lencana keanggotaan didahulukan, ia menjawab pertanyaan yang
               paling menentukan sebelum pengguna membuka kartunya. */}
           {anggota && (
             <View style={styles.lencanaAnggota}>

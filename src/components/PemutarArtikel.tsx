@@ -2,12 +2,12 @@ import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 
 import { colors, radius, spacing } from "@/constants/theme";
@@ -23,7 +23,7 @@ type Props = {
  * Pemutar suara untuk satu artikel.
  *
  * Teksnya diambil dari `GET /artikel/{slug}/teks-baca`, **bukan** dari
- * `konten` yang masih bermarkdown — pembaca akan mengucapkan pagar dan
+ * `konten` yang masih bermarkdown, pembaca akan mengucapkan pagar dan
  * bintangnya. Pemanggilan itu sekaligus mencatat pemakaian fitur suara, jadi
  * ia baru dilakukan ketika pengguna benar-benar menekan putar; memuatnya
  * bersama detail artikel akan menggelembungkan metrik dengan pembaca yang tidak
@@ -34,7 +34,7 @@ export function PemutarArtikel({ slug, judul }: Props) {
   const [mengambil, setMengambil] = useState(false);
 
   /**
-   * `enabled: false` — teksnya diambil hanya lewat `refetch()` saat pengguna
+   * `enabled: false`, teksnya diambil hanya lewat `refetch()` saat pengguna
    * menekan putar.
    *
    * Pemanggilan endpoint ini sekaligus mencatat pemakaian fitur suara, jadi ia
@@ -51,7 +51,7 @@ export function PemutarArtikel({ slug, judul }: Props) {
 
   const paragraf = q.data ? pecahParagraf(q.data.teks_baca) : [];
 
-  // Perangkat tanpa dukungan pembacaan tidak perlu diberi tahu apa-apa —
+  // Perangkat tanpa dukungan pembacaan tidak perlu diberi tahu apa-apa,
   // pemutarnya cukup tidak muncul.
   if (!s.didukung) return null;
 
@@ -165,7 +165,7 @@ export function PemutarArtikel({ slug, judul }: Props) {
       {/*
         Penanda paragraf berjalan. Paragraf yang sedang dibacakan disorot,
         sehingga pengguna yang mendengarkan sambil melihat layar tidak kehilangan
-        tempatnya — dan pengguna yang kesulitan membaca tetap punya rujukan
+        tempatnya, dan pengguna yang kesulitan membaca tetap punya rujukan
         visual tentang sejauh mana pembacaan sudah berjalan.
       */}
       {paragraf.length > 0 && s.status !== "diam" && (

@@ -6,12 +6,12 @@ import * as ImagePicker from "expo-image-picker";
 import { type Href, router } from "expo-router";
 import { useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type ViewStyle,
+    ActivityIndicator,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+    type ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -44,7 +44,7 @@ export default function Kamera() {
     try {
       const photo = await camRef.current?.takePictureAsync({ quality: 0.6 });
       if (photo?.uri) {
-        // URI disimpan di memori — JANGAN dioper lewat params router,
+        // URI disimpan di memori, JANGAN dioper lewat params router,
         // karena akan rusak oleh encode/decode URL (lihat lib/fotoSementara.ts)
         fotoSementara.set(photo.uri);
         router.replace("/klasifikasi/hasil" as Href);

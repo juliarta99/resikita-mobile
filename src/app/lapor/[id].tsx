@@ -2,12 +2,12 @@ import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -17,6 +17,7 @@ import { colors, radius, spacing } from "@/constants/theme";
 import { detailLaporan } from "@/lib/api/laporan";
 import { rupaStatus } from "@/lib/warnaStatus";
 import type { StatusLaporan, StatusProgres } from "@/types/enums";
+import { urlMedia } from "@/lib/media";
 
 /** Ikon tiap status laporan. Label dan warnanya datang dari peladen. */
 const IKON_STATUS: Record<StatusLaporan, keyof typeof Feather.glyphMap> = {
@@ -118,12 +119,10 @@ export default function DetailLaporan() {
           </View>
         </View>
         <Text style={styles.tiket}>
-          {[r.tiket, dibuat && `dikirim ${dibuat}`]
-            .filter(Boolean)
-            .join(" · ")}
+          {[r.tiket, dibuat && `dikirim ${dibuat}`].filter(Boolean).join(" · ")}
         </Text>
 
-        {/* Laporan yang digabungkan tidak ditangani sendiri — pelapor perlu
+        {/* Laporan yang digabungkan tidak ditangani sendiri, pelapor perlu
             tahu ke mana penanganannya berpindah, bukan sekadar melihat status
             "Digabung" tanpa penjelasan. */}
         {r.is_duplikat && !!r.duplikat_of_id && (
@@ -143,7 +142,7 @@ export default function DetailLaporan() {
 
         {/*
           Blok kewenangan ditaruh sebelum isi laporan. Pertanyaan pertama
-          pelapor bukan "apa yang saya tulis tadi" — ia sudah tahu — melainkan
+          pelapor bukan "apa yang saya tulis tadi", ia sudah tahu, melainkan
           "ini sekarang tanggung jawab siapa".
         */}
         {(!!pj?.tipe_label || !!pj?.alasan_label) && (
@@ -155,7 +154,7 @@ export default function DetailLaporan() {
                 <Text style={styles.instansiTeks}>{pj.tipe_label}</Text>
               </View>
             )}
-            {/* `alasan_label` adalah jejak audit routing dari peladen —
+            {/* `alasan_label` adalah jejak audit routing dari peladen,
                 ditampilkan apa adanya, bukan diterjemahkan ulang di klien. */}
             {!!pj.alasan_label && (
               <Text style={styles.routing}>{pj.alasan_label}</Text>
@@ -196,7 +195,7 @@ export default function DetailLaporan() {
               {foto.map((f, i) => (
                 <Image
                   key={f.id}
-                  source={{ uri: f.url }}
+                  source={{ uri: urlMedia(f.url) }}
                   style={styles.bukti}
                   accessibilityIgnoresInvertColors
                   accessibilityLabel={`Foto bukti ke-${i + 1} dari ${foto.length}`}
@@ -297,7 +296,7 @@ function Langkah({
         {!!waktu && <Text style={styles.langkahWaktu}>{waktu}</Text>}
         {!!foto && (
           <Image
-            source={{ uri: foto }}
+            source={{ uri: urlMedia(foto) }}
             style={styles.langkahFoto}
             accessibilityIgnoresInvertColors
             accessibilityLabel={`Foto bukti penanganan: ${judul}`}
@@ -361,7 +360,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   instansi: { flexDirection: "row", alignItems: "center", gap: 8 },
-  instansiTeks: { flex: 1, fontSize: 14, fontWeight: "600", color: colors.text },
+  instansiTeks: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.text,
+  },
   routing: {
     fontSize: 13,
     color: colors.subtext,

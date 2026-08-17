@@ -3,12 +3,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type Href, router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef } from "react";
 import {
-  Linking,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    Linking,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -19,7 +19,7 @@ import { colors, radius, spacing } from "@/constants/theme";
  * Basis Snap Midtrans.
  *
  * Sandbox dan produksi memakai domain berbeda, dan token yang diterbitkan
- * peladen hanya berlaku di domain yang sepasang dengannya — token sandbox yang
+ * peladen hanya berlaku di domain yang sepasang dengannya, token sandbox yang
  * dibuka di `app.midtrans.com` menghasilkan halaman "transaksi tidak ditemukan"
  * yang terbaca seperti pesanannya gagal dibuat. Setel
  * `EXPO_PUBLIC_MIDTRANS_SNAP_URL` mengikuti mode backend; bawaannya produksi
@@ -32,11 +32,12 @@ const SNAP_BASE =
 /**
  * Status transaksi yang berarti "halaman Snap sudah selesai dengan pengguna".
  *
- * Termasuk `pending` — pembayaran virtual account dan gerai ritel memang berakhir
+ * Termasuk `pending`, pembayaran virtual account dan gerai ritel memang berakhir
  * dalam keadaan itu, dan menahan pengguna di halaman Snap sesudahnya tidak
  * memberi mereka apa pun.
  */
-const STATUS_SELESAI = /transaction_status=(settlement|capture|pending|deny|cancel|expire)/;
+const STATUS_SELESAI =
+  /transaction_status=(settlement|capture|pending|deny|cancel|expire)/;
 
 export default function Bayar() {
   const { snap_token, kode, title } = useLocalSearchParams<{
@@ -56,7 +57,7 @@ export default function Bayar() {
   /**
    * Tutup layar pembayaran.
    *
-   * **Status tidak pernah disimpulkan dari sisi klien** — hasil di halaman Snap
+   * **Status tidak pernah disimpulkan dari sisi klien**, hasil di halaman Snap
    * hanya menandakan pengguna sudah selesai berinteraksi, sedangkan yang
    * mengubah status pesanan adalah callback Midtrans ke peladen (§17). Karena
    * itu yang dilakukan di sini cuma satu: buang cache pesanan dan dompet, lalu
@@ -74,7 +75,7 @@ export default function Bayar() {
   }, [qc, kode]);
 
   // Web: Snap tidak bisa dipilih metode-nya dari dalam iframe, jadi dibuka di
-  // tab baru. Pemblokir popup bisa menggagalkannya — tombolnya tetap disediakan.
+  // tab baru. Pemblokir popup bisa menggagalkannya, tombolnya tetap disediakan.
   useEffect(() => {
     if (isWeb && url) {
       try {
@@ -156,7 +157,10 @@ export default function Bayar() {
           source={{ uri: url }}
           startInLoadingState
           onNavigationStateChange={(nav: { url: string }) => {
-            if (STATUS_SELESAI.test(nav.url) || /status_code=20[01]/.test(nav.url)) {
+            if (
+              STATUS_SELESAI.test(nav.url) ||
+              /status_code=20[01]/.test(nav.url)
+            ) {
               // Jeda pendek supaya pengguna sempat membaca layar konfirmasi
               // Midtrans sebelum layarnya berganti.
               setTimeout(selesai, 900);
@@ -167,7 +171,7 @@ export default function Bayar() {
 
       <Text style={styles.note}>
         Status pesanan diperbarui peladen setelah pembayaran terkonfirmasi.
-        Tutup halaman ini kapan saja — pesanan Anda tidak hilang.
+        Tutup halaman ini kapan saja, pesanan Anda tidak hilang.
       </Text>
     </SafeAreaView>
   );

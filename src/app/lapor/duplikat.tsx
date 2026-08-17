@@ -70,9 +70,9 @@ export default function KonfirmasiDuplikat() {
           <View style={styles.banner}>
             <Feather name="info" size={18} color="#8A6D1B" />
             <Text style={styles.bannerTeks}>
-              Sudah ada laporan dalam radius {radiusMeter} meter dari titik yang Anda
-              pilih. Menggabungkan laporan membuat petugas menangani satu masalah
-              sekali, bukan berkali-kali — dan Anda tetap menerima kabar
+              Sudah ada laporan dalam radius {radiusMeter} meter dari titik yang
+              Anda pilih. Menggabungkan laporan membuat petugas menangani satu
+              masalah sekali, bukan berkali-kali, dan Anda tetap menerima kabar
               perkembangannya.
             </Text>
           </View>
@@ -108,7 +108,11 @@ export default function KonfirmasiDuplikat() {
                 <View style={styles.metaBaris}>
                   {!!k.alamat && (
                     <View style={styles.meta}>
-                      <Feather name="map-pin" size={13} color={colors.subtext} />
+                      <Feather
+                        name="map-pin"
+                        size={13}
+                        color={colors.subtext}
+                      />
                       <Text style={styles.metaTeks} numberOfLines={1}>
                         {k.alamat}
                       </Text>
@@ -145,14 +149,12 @@ export default function KonfirmasiDuplikat() {
             accessibilityState={{ disabled: !dipilih }}
           >
             <Feather name="git-merge" size={18} color={colors.white} />
-            <Text style={styles.tombolUtamaTeks}>
-              Gabungkan ke Laporan Ini
-            </Text>
+            <Text style={styles.tombolUtamaTeks}>Gabungkan ke Laporan Ini</Text>
           </Pressable>
 
           {/*
             Jalan keluar ini harus selalu ada. Kemiripan lokasi bukan bukti
-            kesamaan masalah — dua tumpukan sampah berbeda bisa berjarak sepuluh
+            kesamaan masalah, dua tumpukan sampah berbeda bisa berjarak sepuluh
             meter, dan hanya pelapor yang berdiri di sana yang tahu.
           */}
           <Pressable

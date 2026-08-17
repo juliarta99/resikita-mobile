@@ -9,7 +9,7 @@ import { useAuth } from "@/context/AuthContext";
  * Akun petugas dan akun warga terpisah: seseorang masuk sebagai warga untuk
  * menyetor dan berbelanja, dan masuk dengan akun petugasnya untuk bekerja.
  * Karena itu peran menentukan seluruh pengalaman aplikasi, bukan sekadar
- * memunculkan satu menu tambahan — petugas yang membuka aplikasi seharusnya
+ * memunculkan satu menu tambahan, petugas yang membuka aplikasi seharusnya
  * langsung melihat penugasannya, bukan saldo dan katalog produk.
  *
  * Logikanya sengaja dipusatkan di sini. Layar masuk cukup mengarahkan ke `/`

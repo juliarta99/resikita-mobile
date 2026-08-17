@@ -6,8 +6,8 @@ import type { KategoriArtikel } from "@/types/artikel";
  * Nama kategori sebuah artikel, apa pun bentuk yang dikirim endpointnya.
  *
  * Daftar mengirim `kategori` sebagai **string nama**, detail mengirimnya
- * sebagai objek `{ id, nama, slug }`. Perbedaan itu memang disengaja peladen —
- * daftar dibuat seringan mungkin — tapi ia jadi jebakan di klien: kartu yang
+ * sebagai objek `{ id, nama, slug }`. Perbedaan itu memang disengaja peladen,
+ * daftar dibuat seringan mungkin, tapi ia jadi jebakan di klien: kartu yang
  * ditulis untuk bentuk detail (`kategori.nama`) menghasilkan `undefined` di
  * atas data daftar, dan lencananya tampil sebagai kotak berwarna tanpa teks.
  * Bukan galat, bukan pula layar kosong: justru karena itu ia bertahan lama.
@@ -27,7 +27,7 @@ export function namaKategori(
  * Nama tampilan untuk tipe konten yang tidak dikirimi `tipe_label`.
  *
  * Hanya empat nilai enum §2 yang sah. Nilai di luar itu tetap ditampilkan apa
- * adanya — lebih baik pembaca melihat istilah asing daripada lencananya hilang
+ * adanya, lebih baik pembaca melihat istilah asing daripada lencananya hilang
  * diam-diam saat peladen menambah tipe baru.
  */
 const LABEL_TIPE: Record<string, string> = {

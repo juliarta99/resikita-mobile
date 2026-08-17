@@ -2,7 +2,7 @@
  * Titik awal peta ketika lokasi pengguna belum diketahui.
  *
  * Kira-kira pusat geografis kepulauan Indonesia. Dipakai hanya sebagai
- * cadangan terakhir — urutan yang benar adalah: lokasi GPS pengguna, lalu
+ * cadangan terakhir, urutan yang benar adalah: lokasi GPS pengguna, lalu
  * wilayah pada profilnya, baru titik ini.
  *
  * Sebelumnya beberapa layar menanam koordinat Denpasar sebagai bawaan. Untuk

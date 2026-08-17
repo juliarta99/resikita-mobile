@@ -8,7 +8,7 @@ import { Linking, Platform } from "react-native";
  * dikenali sama sekali, di iOS tidak ada penanganannya, dan di Android
  * `canOpenURL` bisa menjawab `true` untuk aplikasi yang ternyata menolak
  * intent-nya. Yang terjadi kemudian adalah ketukan yang mengarahkan pengguna ke
- * layar kosong — atau tidak melakukan apa-apa.
+ * layar kosong, atau tidak melakukan apa-apa.
  *
  * URL `https://` selalu punya penanganan: di ponsel ia dibuka aplikasi Maps
  * lewat deep link bawaan sistem, di web ia membuka tab baru. Koordinatlah yang

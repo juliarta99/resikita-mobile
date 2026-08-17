@@ -23,8 +23,17 @@ import { hapusSesiChat, sesiChat } from "@/lib/api/chatbot";
 import { confirmDialog, notify } from "@/lib/dialog";
 import type { SesiChat } from "@/types/chatbot";
 
-const waktuRelatif = (iso: string) => {
+/**
+ * Waktu relatif, aman terhadap timestamp kosong.
+ *
+ * `terakhir_at` dan `created_at` sama-sama boleh `null` menurut kontrak API.
+ * Tanpa penjagaan ini `new Date(null)` menghasilkan 1 Januari 1970 dan sesi yang
+ * timestamp-nya belum terisi tampil sebagai "20860 hari lalu".
+ */
+const waktuRelatif = (iso: string | null) => {
+  if (!iso) return "Waktu tidak tercatat";
   const selisih = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(selisih)) return "Waktu tidak tercatat";
   const menit = Math.floor(selisih / 60000);
   if (menit < 1) return "Baru saja";
   if (menit < 60) return `${menit} menit lalu`;
@@ -154,8 +163,16 @@ function Kartu({
       onPress={() =>
         router.push({ pathname: "/chatbot", params: { sesi: String(s.id) } })
       }
-      accessibilityRole="button"
-      accessibilityLabel={`Buka percakapan ${s.judul}, ${waktuRelatif(s.updated_at ?? s.created_at)}`}
+      /*
+        Perannya `link`, bukan `button`, karena kartu ini memuat tombol hapus di
+        dalamnya. react-native-web menerjemahkan `accessibilityRole="button"`
+        menjadi elemen `<button>` sungguhan, dan `<button>` di dalam `<button>`
+        adalah HTML tidak sah yang memicu galat hidrasi React. Sebagai `link` ia
+        menjadi `<a>`, yang sah memuat tombol — dan lebih tepat secara semantik,
+        karena ketukannya memang membuka halaman percakapan.
+      */
+      accessibilityRole="link"
+      accessibilityLabel={`Buka percakapan ${s.judul}, ${waktuRelatif(s.terakhir_at ?? s.created_at)}`}
     >
       <View style={styles.ikon}>
         <Feather name="message-circle" size={18} color={colors.brand} />
@@ -165,7 +182,7 @@ function Kartu({
           {s.judul}
         </Text>
         <Text style={styles.waktu}>
-          {waktuRelatif(s.updated_at ?? s.created_at)}
+          {waktuRelatif(s.terakhir_at ?? s.created_at)}
         </Text>
       </View>
       <Pressable

@@ -1,19 +1,19 @@
 /** Autentikasi, profil, dan perangkat. Rujukan: API-DOCS.md §4 dan §18.5–§18.6. */
 
 import type {
-  HasilAuth,
-  KanalVerifikasi,
-  PayloadDaftar,
-  PayloadMasuk,
-  PayloadPerangkat,
-  PayloadResetPassword,
-  PayloadUbahPassword,
-  PayloadUbahProfil,
-  User,
+    HasilAuth,
+    KanalVerifikasi,
+    PayloadDaftar,
+    PayloadMasuk,
+    PayloadPerangkat,
+    PayloadResetPassword,
+    PayloadUbahPassword,
+    PayloadUbahProfil,
+    User,
 } from "@/types/auth";
 import { appendFoto, del, get, post, postMultipart, put } from "./client";
 
-/** §4.1. Pathnya `/auth/daftar` — bukan `/auth/register`. */
+/** §4.1. Pathnya `/auth/daftar`, bukan `/auth/register`. */
 export const daftar = (body: PayloadDaftar) =>
   post<HasilAuth>("/auth/daftar", body);
 
@@ -55,7 +55,7 @@ export const verifikasiKode = (kanal: KanalVerifikasi, kode: string) =>
 export const lupaPassword = (email: string) =>
   post<null>("/auth/lupa-password", { email });
 
-/** Seluruh token lama dicabut setelah berhasil — pengguna harus masuk ulang. */
+/** Seluruh token lama dicabut setelah berhasil, pengguna harus masuk ulang. */
 export const resetPassword = (body: PayloadResetPassword) =>
   post<null>("/auth/reset-password", body);
 
@@ -66,13 +66,32 @@ export const ubahPassword = (body: PayloadUbahPassword) =>
   put<null>("/profil/password", body);
 
 /**
+ * Hapus akun secara permanen.
+ *
+ * **PERINGATAN: endpoint ini belum ada di API-DOCS.md.** Seluruh §4 hanya
+ * memuat 4.1 sampai 4.9, dan tak satu pun tentang penghapusan akun. Path di
+ * bawah dipilih sebagai pasangan alami `PUT /profil` yang sudah ada, bukan
+ * karena kontraknya pernah ditetapkan — sampai peladen mengimplementasikannya,
+ * pemanggilan ini akan menjawab `404` dan layar Hapus Akun tidak akan bekerja.
+ *
+ * Ini bukan hal yang bisa ditunda lama: Google Play mewajibkan aplikasi berakun
+ * menyediakan jalur penghapusan akun dari dalam aplikasi. Mintakan ke tim
+ * backend, lalu catat kontraknya sebagai §4.10 sebelum aplikasi disubmit.
+ *
+ * Kata sandi ikut dikirim sebagai konfirmasi terakhir, mengikuti pola
+ * `PUT /profil/password` yang juga menuntut `password_lama`.
+ */
+export const hapusAkun = (password: string) =>
+  del<null>("/profil", { data: { password } });
+
+/**
  * Perbarui profil beserta avatar (§4.8).
  *
  * Dikirim sebagai `POST` dengan `_method=PUT`, bukan `PUT` sungguhan: PHP tidak
  * mem-parse berkas pada permintaan `PUT`, sehingga avatarnya akan sampai
  * sebagai badan kosong tanpa satu pun galat yang menjelaskan kenapa.
  *
- * Tidak ada endpoint `/profil/avatar` terpisah — avatar adalah salah satu field
+ * Tidak ada endpoint `/profil/avatar` terpisah, avatar adalah salah satu field
  * profil, jadi field lain boleh ikut dikirim dalam permintaan yang sama.
  */
 export async function ubahProfilDenganAvatar(
@@ -94,7 +113,7 @@ export const daftarkanPerangkat = (body: PayloadPerangkat) =>
   post<null>("/perangkat", body);
 
 /**
- * §18.6. `DELETE` **dengan badan JSON** — axios mengirimkannya lewat `data`.
+ * §18.6. `DELETE` **dengan badan JSON**, axios mengirimkannya lewat `data`.
  *
  * Panggil sebelum `POST /auth/logout`, supaya perangkat berhenti menerima
  * notifikasi milik akun itu.

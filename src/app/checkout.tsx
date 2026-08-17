@@ -34,6 +34,7 @@ import { cariTujuanOngkir } from "@/lib/api/produk";
 import { notify } from "@/lib/dialog";
 import { formatRupiah } from "@/lib/rupiah";
 import type { MetodeBayar } from "@/types/enums";
+import { urlMedia } from "@/lib/media";
 import type {
   KelompokKeranjang,
   OpsiOngkir,
@@ -50,7 +51,7 @@ type PilihanKurir = Record<number, OpsiOngkir | undefined>;
  * Checkout untuk **seluruh** isi keranjang sekaligus.
  *
  * Belanja lintas toko dipecah peladen menjadi beberapa pesanan, masing-masing
- * dengan ongkirnya sendiri — tapi pemecahan itu terjadi dalam **satu**
+ * dengan ongkirnya sendiri, tapi pemecahan itu terjadi dalam **satu**
  * permintaan yang wajib memuat pilihan pengiriman untuk setiap toko. Versi
  * sebelumnya melakukan checkout per toko dan karena itu selalu ditolak begitu
  * keranjang berisi lebih dari satu penjual.
@@ -77,7 +78,7 @@ export default function Checkout() {
    * `null` berarti "belum disentuh" dan diperlakukan sebagai seluruh isi
    * keranjang, jadi tidak ada efek samping yang perlu menyalin daftar toko ke
    * state begitu keranjang selesai dimuat. Nilai yang sudah dipilih pun disaring
-   * ulang terhadap isi keranjang terkini — kalau sebuah toko lenyap karena
+   * ulang terhadap isi keranjang terkini, kalau sebuah toko lenyap karena
    * produknya dibersihkan peladen, id-nya ikut hilang alih-alih tertinggal dan
    * membuat `POST /pesanan` ditolak dengan "toko tidak ada di keranjang".
    */
@@ -92,29 +93,34 @@ export default function Checkout() {
   );
 
   const terpilih = useMemo(
-    () => (pilihan === null ? idToko : idToko.filter((id) => pilihan.includes(id))),
+    () =>
+      pilihan === null ? idToko : idToko.filter((id) => pilihan.includes(id)),
     [pilihan, idToko],
   );
 
   const tokoTerpilih = useMemo(
-    () => k.toko.filter((t) => t.umkm?.id != null && terpilih.includes(t.umkm.id)),
+    () =>
+      k.toko.filter((t) => t.umkm?.id != null && terpilih.includes(t.umkm.id)),
     [k.toko, terpilih],
   );
 
-  /** Kunci query pratinjau ikut memuat pilihan toko — urutannya distabilkan. */
+  /** Kunci query pratinjau ikut memuat pilihan toko, urutannya distabilkan. */
   const kunciTerpilih = useMemo(
     () => [...terpilih].sort((a, b) => a - b).join(","),
     [terpilih],
   );
 
-  const saldoQ = useQuery({ queryKey: ["dompet", "saldo"], queryFn: saldoDompet });
+  const saldoQ = useQuery({
+    queryKey: ["dompet", "saldo"],
+    queryFn: saldoDompet,
+  });
 
   /**
    * Pencarian alamat tujuan.
    *
    * Query-nya bernama `cari` di peladen. Ketika klien mengirim `q`, peladen
    * mengabaikannya diam-diam, mencari tanpa kata kunci, dan mengembalikan
-   * daftar kosong — itulah "lokasi tidak ditemukan" yang muncul untuk nama
+   * daftar kosong, itulah "lokasi tidak ditemukan" yang muncul untuk nama
    * kecamatan yang sebenarnya benar.
    */
   const tujuanQ = useQuery({
@@ -198,7 +204,7 @@ export default function Checkout() {
         alamat_kirim: alamat.trim(),
         destination_id: tujuan!.id,
         metode_bayar: metode,
-        // Objek yang dikunci `umkm_id`, bukan array — dan **kuncinya itulah
+        // Objek yang dikunci `umkm_id`, bukan array, dan **kuncinya itulah
         // yang menentukan toko mana yang dipesan**. Dirakit dari pratinjau,
         // bukan dari daftar toko yang kebetulan sedang tampil, supaya toko yang
         // dikirim persis sama dengan toko yang ongkirnya sudah dihitung.
@@ -213,7 +219,7 @@ export default function Checkout() {
         ),
       }),
     onSuccess: async (pesanan) => {
-      // Keranjang dikosongkan **sebagian** — toko yang tidak dipesan tetap
+      // Keranjang dikosongkan **sebagian**, toko yang tidak dipesan tetap
       // tinggal di sana, jadi isinya harus dimuat ulang, bukan diasumsikan nol.
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["keranjang"] }),
@@ -291,14 +297,14 @@ export default function Checkout() {
   const submit = () => {
     galat.bersihkan();
     if (terpilih.length === 0)
-      return galat.tandai(
-        "toko",
-        "Pilih setidaknya satu toko untuk dipesan.",
-      );
+      return galat.tandai("toko", "Pilih setidaknya satu toko untuk dipesan.");
     if (!nama.trim())
       return galat.tandai("nama_penerima", "Nama penerima wajib diisi.");
     if (!phone.trim())
-      return galat.tandai("phone_penerima", "Nomor telepon penerima wajib diisi.");
+      return galat.tandai(
+        "phone_penerima",
+        "Nomor telepon penerima wajib diisi.",
+      );
     if (alamat.trim().length < 10)
       return galat.tandai(
         "alamat_kirim",
@@ -357,7 +363,10 @@ export default function Checkout() {
     return (
       <SafeAreaView style={styles.screen} edges={["top"]}>
         {appbar}
-        <ErrorState error={k.query.error} onCobaLagi={() => k.query.refetch()} />
+        <ErrorState
+          error={k.query.error}
+          onCobaLagi={() => k.query.refetch()}
+        />
       </SafeAreaView>
     );
   }
@@ -472,7 +481,11 @@ export default function Checkout() {
 
           <View style={styles.kartu}>
             <Text style={styles.kartuJudul}>Penerima</Text>
-            <Bidang label="Nama Penerima" required error={galat.field.nama_penerima}>
+            <Bidang
+              label="Nama Penerima"
+              required
+              error={galat.field.nama_penerima}
+            >
               <TextInput
                 style={[
                   styles.input,
@@ -624,7 +637,7 @@ export default function Checkout() {
           </View>
 
           {/*
-            Kartunya selalu ada supaya pengguna tahu langkah ini menunggunya —
+            Kartunya selalu ada supaya pengguna tahu langkah ini menunggunya,
             yang berubah hanyalah isinya, dari ajakan mengisi alamat menjadi
             daftar kurir.
           */}
@@ -796,7 +809,7 @@ export default function Checkout() {
               </Text>
             ) : saldoKurang ? (
               <Text style={styles.galatKecil}>
-                Saldo Anda {formatRupiah(saldo)} — belum mencukupi untuk
+                Saldo Anda {formatRupiah(saldo)}, belum mencukupi untuk
                 perkiraan total ini.
               </Text>
             ) : null}
@@ -890,7 +903,7 @@ export default function Checkout() {
 /**
  * Penanda langkah checkout.
  *
- * Murni penanda posisi, bukan navigasi — urutannya ditentukan kelengkapan isian,
+ * Murni penanda posisi, bukan navigasi, urutannya ditentukan kelengkapan isian,
  * dan melompati satu langkah tidak mungkin karena langkah berikutnya memang
  * bergantung pada data langkah sebelumnya.
  */
@@ -907,7 +920,7 @@ function Langkah({ items }: { items: { label: string; selesai: boolean }[] }) {
       {items.map((it, i) => (
         <View key={it.label} style={styles.langkahItem}>
           {/*
-            Garis penghubung digambar setengah-setengah di dalam tiap langkah —
+            Garis penghubung digambar setengah-setengah di dalam tiap langkah,
             persen negatif untuk `left` tidak diperlakukan sama di web dan
             native, jadi tidak ada satu garis panjang yang melintasi keduanya.
           */}
@@ -950,7 +963,10 @@ function Langkah({ items }: { items: { label: string; selesai: boolean }[] }) {
             )}
           </View>
           <Text
-            style={[styles.langkahLabel, i === aktif && styles.langkahLabelAktif]}
+            style={[
+              styles.langkahLabel,
+              i === aktif && styles.langkahLabelAktif,
+            ]}
             numberOfLines={1}
           >
             {it.label}
@@ -964,7 +980,7 @@ function Langkah({ items }: { items: { label: string; selesai: boolean }[] }) {
 /**
  * Isi keranjang satu toko, tampil apa adanya dari peladen.
  *
- * `onAlih` kosong berarti tokonya tidak bisa dilepas — dipakai ketika keranjang
+ * `onAlih` kosong berarti tokonya tidak bisa dilepas, dipakai ketika keranjang
  * hanya berisi satu toko.
  */
 function RingkasToko({
@@ -1016,7 +1032,7 @@ function RingkasToko({
           <View style={styles.itemGambar}>
             {it.produk?.foto_utama_url ? (
               <Image
-                source={{ uri: it.produk.foto_utama_url }}
+                source={{ uri: urlMedia(it.produk.foto_utama_url) }}
                 style={styles.itemGambarIsi}
                 accessibilityIgnoresInvertColors
               />
@@ -1206,7 +1222,12 @@ const styles = StyleSheet.create({
   tokoKepala: { flexDirection: "row", alignItems: "center", gap: 8 },
   tokoNama: { flex: 1, fontSize: 14, fontWeight: "700", color: colors.text },
   tokoSubtotal: { fontSize: 13, fontWeight: "700", color: colors.text },
-  tokoBerat: { fontSize: 11, color: colors.subtext, marginTop: 2, marginBottom: 10 },
+  tokoBerat: {
+    fontSize: 11,
+    color: colors.subtext,
+    marginTop: 2,
+    marginBottom: 10,
+  },
   kurir: {
     flexDirection: "row",
     alignItems: "center",

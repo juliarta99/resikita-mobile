@@ -3,13 +3,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Href, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -20,14 +20,15 @@ import { colors, radius, spacing } from "@/constants/theme";
 import { useBottomPad } from "@/hooks/useBottomPad";
 import { ApiError } from "@/lib/api/error";
 import {
-  bayarUlangPesanan,
-  detailPesanan,
-  terimaPesanan,
+    bayarUlangPesanan,
+    detailPesanan,
+    terimaPesanan,
 } from "@/lib/api/pesanan";
 import { confirmDialog, notify } from "@/lib/dialog";
 import { reorderItems } from "@/lib/reorder";
 import { formatRupiah } from "@/lib/rupiah";
 import { metaStatusPesanan } from "@/lib/statusPesanan";
+import { urlMedia } from "@/lib/media";
 
 const waktuLengkap = (iso: string | null) =>
   iso
@@ -42,7 +43,7 @@ const waktuLengkap = (iso: string | null) =>
 
 export default function DetailPesanan() {
   // Segmen rutenya bernama `[id]`, tapi nilainya adalah `kode` pesanan
-  // (mis. ORD-202608-000412) — seluruh endpoint turunannya memakai kode.
+  // (mis. ORD-202608-000412), seluruh endpoint turunannya memakai kode.
   const { id: kode } = useLocalSearchParams<{ id: string }>();
   const qc = useQueryClient();
   const pad = useBottomPad();
@@ -86,7 +87,7 @@ export default function DetailPesanan() {
    * Perlu karena checkout lintas toko menghasilkan beberapa pesanan sekaligus
    * dan hanya token pesanan pertama yang langsung dibuka; sisanya dilunasi dari
    * layar ini. Token yang lama juga bisa kedaluwarsa tanpa peladen mengirim
-   * tanggal kedaluwarsanya — jadi jalannya selalu minta token baru.
+   * tanggal kedaluwarsanya, jadi jalannya selalu minta token baru.
    */
   const bayarUlang = useMutation({
     mutationFn: () => bayarUlangPesanan(kode),
@@ -215,7 +216,7 @@ export default function DetailPesanan() {
             Nama, harga, dan subtotal baris pesanan adalah **snapshot** saat
             pesanan dibuat; relasi `produk` hanya dipakai untuk fotonya. Membaca
             nama dari relasi akan menampilkan nama produk hari ini, bukan yang
-            dibeli — dan kosong sama sekali kalau produknya sudah dihapus.
+            dibeli, dan kosong sama sekali kalau produknya sudah dihapus.
           */}
           {item.length === 0 ? (
             <Text style={styles.kosong}>
@@ -227,7 +228,7 @@ export default function DetailPesanan() {
                 <View style={styles.gambar}>
                   {it.produk?.foto_utama_url ? (
                     <Image
-                      source={{ uri: it.produk.foto_utama_url }}
+                      source={{ uri: urlMedia(it.produk.foto_utama_url) }}
                       style={styles.gambarIsi}
                       accessibilityIgnoresInvertColors
                     />
@@ -287,8 +288,8 @@ export default function DetailPesanan() {
           <Pressable
             style={styles.tombolUtama}
             onPress={() => {
-              // Token yang masih ada dipakai langsung; kalau tidak ada — mis.
-              // pesanan kedua dari checkout lintas toko — mintakan yang baru.
+              // Token yang masih ada dipakai langsung; kalau tidak ada, mis.
+              // pesanan kedua dari checkout lintas toko, mintakan yang baru.
               if (p.snap_token) {
                 router.push({
                   pathname: "/bayar",
@@ -357,7 +358,7 @@ export default function DetailPesanan() {
                 <Text style={styles.tombolKeduaTeks}>Beli Lagi</Text>
               )}
             </Pressable>
-            {/* Aturan transisi milik peladen — `bisa_diulas`, bukan status. */}
+            {/* Aturan transisi milik peladen, `bisa_diulas`, bukan status. */}
             {p.bisa_diulas && (
               <Pressable
                 style={styles.tombolUtama}
@@ -459,7 +460,12 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 12,
   },
-  item: { flexDirection: "row", gap: 12, alignItems: "center", marginBottom: 12 },
+  item: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+    marginBottom: 12,
+  },
   gambar: {
     width: 52,
     height: 52,

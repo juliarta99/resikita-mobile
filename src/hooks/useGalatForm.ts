@@ -8,7 +8,7 @@ export type GalatField = Record<string, string | undefined>;
 /**
  * Penampung galat sebuah formulir.
  *
- * Dibuat karena setiap layar formulir sebelumnya menulis ulang pola yang sama —
+ * Dibuat karena setiap layar formulir sebelumnya menulis ulang pola yang sama,
  * dan menulisnya sedikit berbeda-beda. Yang paling merugikan: galat validasi
  * sisi klien ("Email wajib diisi") ditumpuk jadi satu kalimat di atas tombol
  * kirim, jauh dari baris yang salah. Pengguna membaca kalimatnya, lalu harus
@@ -16,9 +16,9 @@ export type GalatField = Record<string, string | undefined>;
  *
  * Di sini keduanya dipisahkan dengan tegas:
  *
- * - **`field`** — dipasang ke prop `error` masing-masing input. Bingkainya jadi
+ * - **`field`**, dipasang ke prop `error` masing-masing input. Bingkainya jadi
  *   merah dan pesannya muncul tepat di bawahnya.
- * - **`umum`** — hanya untuk galat yang memang tidak menunjuk satu field:
+ * - **`umum`**, hanya untuk galat yang memang tidak menunjuk satu field:
  *   jaringan mati, `403`, atau pelanggaran aturan bisnis yang datang sebagai
  *   `422` tanpa `errors` (§1.3). Tampilkan di **atas** formulir, bukan di atas
  *   tombol.
@@ -44,15 +44,15 @@ export function useGalatForm() {
    * `422` punya dua bentuk: Form Request menyertakan `errors` per field,
    * sedangkan pelanggaran aturan bisnis (saldo kurang, keranjang kosong) hanya
    * menyertakan `message`. Keduanya ditangani, dan yang punya `errors` **tidak**
-   * ikut memunculkan pesan umum — kalau tidak, pengguna membaca keluhan yang
+   * ikut memunculkan pesan umum, kalau tidak, pengguna membaca keluhan yang
    * sama dua kali di dua tempat.
    *
    * `petaField` memetakan nama field peladen ke nama field di layar, untuk
    * kasus seperti `password_confirmation` yang di sini bernama `konfirmasi`.
    *
    * Kembaliannya adalah peta galat yang baru saja dipasang. Pemanggil yang
-   * perlu bereaksi — membuka bagian form yang terlipat, menggulir ke field yang
-   * salah — harus membaca nilai ini, bukan `field`: state React belum berubah
+   * perlu bereaksi, membuka bagian form yang terlipat, menggulir ke field yang
+   * salah, harus membaca nilai ini, bukan `field`: state React belum berubah
    * pada baris berikutnya.
    */
   const tangani = useCallback(

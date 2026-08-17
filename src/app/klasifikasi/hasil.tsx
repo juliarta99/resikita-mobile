@@ -3,12 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import { useState } from "react";
 import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -19,6 +19,7 @@ import { colors, radius, spacing } from "@/constants/theme";
 import { klasifikasi } from "@/lib/api/klasifikasi";
 import { fotoSementara } from "@/lib/fotoSementara";
 import { formatRupiahOpsional } from "@/lib/rupiah";
+import { urlMedia } from "@/lib/media";
 
 export default function Hasil() {
   // URI dibaca dari memori, BUKAN dari params router: karakter ter-encode
@@ -32,7 +33,7 @@ export default function Hasil() {
    *
    * Yang dibutuhkan layar ini persis yang diberikan Query: satu pemanggilan,
    * keadaan memuat dan galat, serta tombol coba lagi. Risikonya adalah
-   * pemanggilan ulang tak sengaja yang membuat riwayat ganda — karena itu tiga
+   * pemanggilan ulang tak sengaja yang membuat riwayat ganda, karena itu tiga
    * pagar di bawah bukan hiasan: `retry: false` (API-DOCS §15 melarang
    * mengulang POST otomatis), `staleTime: Infinity` supaya kembali ke layar ini
    * tidak memicu unggah ulang, dan kunci berbasis URI supaya foto yang sama
@@ -123,7 +124,7 @@ export default function Hasil() {
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={styles.imgWrap}>
           <Image
-            source={{ uri: d.foto_url || uri }}
+            source={{ uri: urlMedia(d.foto_url || uri) }}
             style={StyleSheet.absoluteFill}
             resizeMode="cover"
             accessibilityIgnoresInvertColors
@@ -134,7 +135,7 @@ export default function Hasil() {
         {/*
           Peringatan penanganan untuk B3 dan elektronik ditaruh paling atas,
           sebelum apa pun. Isinya ditambahkan peladen dan tidak bergantung pada
-          jawaban model, jadi ia tetap benar bahkan ketika keyakinannya rendah —
+          jawaban model, jadi ia tetap benar bahkan ketika keyakinannya rendah,
           dan justru di kasus itulah salah tangani paling berbahaya.
         */}
         {!!d.catatan && (
@@ -144,12 +145,7 @@ export default function Hasil() {
           </View>
         )}
 
-        <View
-          style={[
-            styles.result,
-            d.keyakinan_rendah && styles.resultRagu,
-          ]}
-        >
+        <View style={[styles.result, d.keyakinan_rendah && styles.resultRagu]}>
           <View style={styles.resultHead}>
             <Feather
               name={d.keyakinan_rendah ? "help-circle" : "check-circle"}
@@ -171,10 +167,7 @@ export default function Hasil() {
           )}
 
           <View style={styles.metrics}>
-            <Metric
-              label="Material"
-              value={d.material ?? "—"}
-            />
+            <Metric label="Material" value={d.material ?? "—"} />
             <Metric label="Keyakinan" value={`${Math.round(d.confidence)}%`} />
             <Metric
               label="Perkiraan nilai"
@@ -191,7 +184,7 @@ export default function Hasil() {
 
         {/*
           Ketika peladen menandai keyakinannya rendah, tawaran memotret ulang
-          harus menonjol — bukan disembunyikan di bawah seperti tombol biasa.
+          harus menonjol, bukan disembunyikan di bawah seperti tombol biasa.
           Ambangnya ditentukan peladen supaya hasil yang sama tidak tampil
           sebagai kepastian di satu klien dan dugaan di klien lain.
         */}

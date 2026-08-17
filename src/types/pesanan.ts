@@ -13,7 +13,7 @@ export type ItemPesanan = {
   harga: Rupiah;
   qty: number;
   subtotal: Rupiah;
-  /** Relasi — dimuat pada detail pesanan. */
+  /** Relasi, dimuat pada detail pesanan. */
   produk?: Produk | null;
 };
 
@@ -38,7 +38,7 @@ export type Pesanan = {
   kurir: string | null;
   layanan_kurir: string | null;
   no_resi: string | null;
-  /** Bersyarat — **hanya saat `status === "menunggu_bayar"`**. */
+  /** Bersyarat, **hanya saat `status === "menunggu_bayar"`**. */
   snap_token?: string | null;
   umkm?: Umkm | null;
   item?: ItemPesanan[];
@@ -55,7 +55,7 @@ export type ParamsPesanan = ParamsHalaman & {
 /**
  * Titik keberangkatan paket sebuah toko (§16.3).
  *
- * Ongkir dihitung dari sini, bukan dari satu titik milik platform — dua toko
+ * Ongkir dihitung dari sini, bukan dari satu titik milik platform, dua toko
  * dengan berat paket sama bisa menghasilkan tarif berbeda, dan itu benar.
  * Ditampilkan sebagai "Dikirim dari …" supaya selisihnya terbaca sebagai jarak,
  * bukan sebagai kekeliruan hitung.
@@ -80,7 +80,7 @@ export type PratinjauToko = {
  * Query `GET /pesanan/pratinjau` (§16.3).
  *
  * `umkm_ids` opsional. Tanpa itu hasilnya seluruh isi keranjang; dengan itu
- * hanya toko yang diminta — dan nilainya **wajib sama** dengan kunci
+ * hanya toko yang diminta, dan nilainya **wajib sama** dengan kunci
  * `pengiriman` yang nanti dikirim saat checkout, kalau tidak angka yang dilihat
  * pembeli bukan angka yang ditagihkan.
  */

@@ -6,6 +6,7 @@ import LencanaArtikel from "@/components/LencanaArtikel";
 import { colors, radius } from "@/constants/theme";
 import { labelTipe, namaKategori } from "@/lib/artikel";
 import type { ArtikelRingkas } from "@/types/artikel";
+import { urlMedia } from "@/lib/media";
 
 /**
  * Kartu artikel ringkas untuk beranda.
@@ -13,7 +14,7 @@ import type { ArtikelRingkas } from "@/types/artikel";
  * Bentuknya `ArtikelRingkas`, bukan `Artikel`: yang sampai ke beranda datang
  * dari `GET /artikel`, dan di sana `konten`, `didengarkan`, serta objek
  * kategori memang tidak ikut. Menyebutnya `Artikel` membuat TypeScript
- * menjanjikan field yang tidak pernah ada — persis bagaimana lencana kategori
+ * menjanjikan field yang tidak pernah ada, persis bagaimana lencana kategori
  * bisa kosong tanpa satu pun galat muncul.
  */
 export function KartuArtikel({ a }: { a: ArtikelRingkas }) {
@@ -38,7 +39,7 @@ export function KartuArtikel({ a }: { a: ArtikelRingkas }) {
       <View style={styles.thumb}>
         {a.thumbnail_url ? (
           <Image
-            source={{ uri: a.thumbnail_url }}
+            source={{ uri: urlMedia(a.thumbnail_url) }}
             style={styles.gambar}
             accessibilityIgnoresInvertColors
           />

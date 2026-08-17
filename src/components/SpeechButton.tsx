@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text } from "react-native";
 
 import { colors, radius } from "@/constants/theme";
 import { useSpeech } from "@/hooks/useSpeech";
@@ -27,7 +27,7 @@ type Props = {
 /**
  * Tombol "dengarkan" untuk sepotong teks.
  *
- * Disembunyikan sendiri bila perangkat tidak mendukung pembacaan — sesuai
+ * Disembunyikan sendiri bila perangkat tidak mendukung pembacaan, sesuai
  * ketentuan CLAUDE.md §9, ketidaktersediaan bukan galat yang perlu diberitakan.
  */
 export function SpeechButton({

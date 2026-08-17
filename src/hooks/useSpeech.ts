@@ -1,5 +1,11 @@
 import * as Speech from "expo-speech";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { Platform } from "react-native";
 
 export const BAHASA_TTS = "id-ID";
@@ -16,7 +22,7 @@ const web = Platform.OS === "web";
  * Pecah teks jadi paragraf.
  *
  * Bukan sekadar untuk penanda visual. Seluruh mekanisme jeda-lanjut di bawah
- * bergantung pada pemenggalan ini — lihat catatan pada `jeda()`.
+ * bergantung pada pemenggalan ini, lihat catatan pada `jeda()`.
  */
 export function pecahParagraf(teks: string): string[] {
   return teks
@@ -33,14 +39,14 @@ export function pecahParagraf(teks: string): string[] {
  *
  * ### Kenapa per paragraf, bukan sekali telan
  *
- * `Speech.pause()` dan `Speech.resume()` **tidak tersedia di Android** — itu
+ * `Speech.pause()` dan `Speech.resume()` **tidak tersedia di Android**, itu
  * tertulis di deklarasi tipe expo-speech, dan Android adalah mayoritas pengguna
  * aplikasi ini. Kalau seluruh artikel dikirim sebagai satu ucapan, tombol jeda
  * yang diminta `CLAUDE.md` §9 tidak akan berfungsi di sana sama sekali.
  *
  * Dengan membaca paragraf demi paragraf, "jeda" menjadi: hentikan ucapan, ingat
  * paragraf keberapa. "Lanjutkan" berarti mengucapkan paragraf itu dari awal.
- * Pengguna mendengar satu paragraf terulang, bukan kehilangan tempatnya —
+ * Pengguna mendengar satu paragraf terulang, bukan kehilangan tempatnya,
  * pertukaran yang jauh lebih baik daripada tombol yang mati.
  *
  * Pemenggalan yang sama sekaligus memberi penanda paragraf berjalan dan
@@ -50,7 +56,26 @@ export function useSpeech() {
   const [status, setStatus] = useState<StatusSuara>("diam");
   const [indeksParagraf, setIndeksParagraf] = useState(0);
   const [kecepatan, setKecepatan] = useState<Kecepatan>(1);
-  const [didukung, setDidukung] = useState(true);
+
+  /**
+   * Ketersediaan TTS.
+   *
+   * Di web ini pemeriksaan kemampuan peramban, dan peramban baru bisa ditanya
+   * setelah halamannya terhidrasi — `expo export -p web` merender statis lebih
+   * dulu, saat `window` belum ada. Versi sebelumnya menyetelnya lewat `useState`
+   * plus efek, yang berarti satu render tambahan pada setiap pemakaian hook ini
+   * dan peringatan React soal setState di dalam efek.
+   *
+   * `useSyncExternalStore` memang dibuat untuk kasus ini: ia memberi nilai
+   * berbeda untuk render peladen dan render klien tanpa efek sama sekali, dan
+   * tanpa ketidakcocokan hidrasi. Langganannya kosong karena jawabannya tidak
+   * pernah berubah selama halaman hidup.
+   */
+  const didukung = useSyncExternalStore(
+    () => () => {},
+    () => !web || (typeof window !== "undefined" && "speechSynthesis" in window),
+    () => false,
+  );
 
   const paragrafRef = useRef<string[]>([]);
   const indeksRef = useRef(0);
@@ -61,17 +86,21 @@ export function useSpeech() {
    */
   const dihentikanSengaja = useRef(false);
 
-  useEffect(() => {
-    if (web) {
-      setDidukung(
-        typeof window !== "undefined" && "speechSynthesis" in window,
-      );
-    }
-  }, []);
+  /**
+   * Ucapkan satu paragraf, lalu lanjut sendiri ke paragraf berikutnya.
+   *
+   * Rekursinya lewat ref, bukan dengan memanggil `ucapkan` dari dalam
+   * `useCallback` yang sedang mendefinisikannya. Pemanggilan langsung itu
+   * membaca pengikatan yang belum selesai dibentuk, dan meski di praktiknya
+   * berjalan, ia menutup jalan bagi versi fungsi ini yang mana pun untuk
+   * diperbarui — `onDone` selamanya memanggil salinan dari render pertama.
+   */
+  const ucapkanRef = useRef<(indeks: number) => void>(() => {});
 
   const ucapkan = useCallback((indeks: number) => {
     const daftar = paragrafRef.current;
-    if (indeks >= daftar.length) {
+    const paragraf = daftar[indeks];
+    if (paragraf === undefined) {
       setStatus("diam");
       setIndeksParagraf(0);
       indeksRef.current = 0;
@@ -83,16 +112,24 @@ export function useSpeech() {
     setStatus("membaca");
     dihentikanSengaja.current = false;
 
-    Speech.speak(daftar[indeks], {
+    Speech.speak(paragraf, {
       language: BAHASA_TTS,
       rate: kecepatanRef.current,
       onDone: () => {
         if (dihentikanSengaja.current) return;
-        ucapkan(indeks + 1);
+        ucapkanRef.current(indeks + 1);
       },
       onError: () => setStatus("diam"),
     });
   }, []);
+
+  // Disinkronkan lewat efek, bukan ditulis saat render: menulis ref saat render
+  // sama tidak amannya dengan membacanya. `onDone` baru bisa berbunyi setelah
+  // ucapan pertama dimulai, jauh sesudah efek ini berjalan, jadi ref-nya tidak
+  // pernah benar-benar masih berisi fungsi kosong ketika dipanggil.
+  useEffect(() => {
+    ucapkanRef.current = ucapkan;
+  }, [ucapkan]);
 
   const putar = useCallback(
     (teks: string, mulaiDari = 0) => {
@@ -109,7 +146,7 @@ export function useSpeech() {
   /**
    * Hentikan ucapan tapi pertahankan posisi paragraf.
    *
-   * Sengaja tidak memakai `Speech.pause()` walau tersedia di iOS dan web —
+   * Sengaja tidak memakai `Speech.pause()` walau tersedia di iOS dan web,
    * satu perilaku untuk semua platform lebih mudah dipercaya daripada jeda
    * yang halus di satu tempat dan kasar di tempat lain, dan pengujian di iOS
    * tidak akan pernah memunculkan bug yang hanya ada di Android.

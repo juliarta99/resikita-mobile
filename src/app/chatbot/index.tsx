@@ -3,15 +3,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Href, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -21,10 +21,10 @@ import { colors, radius, spacing } from "@/constants/theme";
 import { useSpeech } from "@/hooks/useSpeech";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import {
-  detailSesiChat,
-  kirimPesanChat,
-  saranPertanyaan,
-  tandaiDibacakan,
+    detailSesiChat,
+    kirimPesanChat,
+    saranPertanyaan,
+    tandaiDibacakan,
 } from "@/lib/api/chatbot";
 import { ApiError } from "@/lib/api/error";
 import type { PesanChat, SesiChat } from "@/types/chatbot";
@@ -33,7 +33,7 @@ import type { SumberInput } from "@/types/enums";
 /**
  * Pesan yang sudah dikirim pengguna tapi belum dijawab peladen.
  *
- * `POST /chatbot/pesan` hanya mengembalikan balasan asisten — pesan pengguna
+ * `POST /chatbot/pesan` hanya mengembalikan balasan asisten, pesan pengguna
  * **sengaja tidak ikut** (§3.10), jadi satu-satunya yang tahu apa yang barusan
  * dikirim adalah layar ini. Tanpa menyimpannya, gelembung pengguna baru muncul
  * setelah model selesai berpikir belasan detik, dan selama itu layar tampak
@@ -46,7 +46,7 @@ type Antrean = { konten: string; sumber: SumberInput };
  *
  * Tiga bentuk yang berbeda asal-usulnya: pesan yang sudah tersimpan di
  * peladen, pesan yang masih dalam perjalanan, dan tempat balasan yang sedang
- * disusun. Menyatukannya sebagai data — bukan sebagai `ListFooterComponent` —
+ * disusun. Menyatukannya sebagai data, bukan sebagai `ListFooterComponent`,
  * membuat ketiganya ikut aturan gulir yang sama.
  */
 type Baris =
@@ -59,7 +59,7 @@ type Baris =
  *
  * `GET /chatbot/saran-pertanyaan` menyesuaikan wilayah pengguna dan lebih baik
  * dipakai bila ada. Tapi layar percakapan kosong tanpa satu pun tawaran adalah
- * kebuntuan yang nyata — pengguna baru sering tidak tahu boleh bertanya apa,
+ * kebuntuan yang nyata, pengguna baru sering tidak tahu boleh bertanya apa,
  * dan justru merekalah yang paling butuh asisten ini. Ketiga pertanyaan di
  * bawah dipilih karena mewakili tiga hal yang paling sering ditanyakan warga:
  * memilah, mengolah di rumah, dan menjual.
@@ -97,7 +97,7 @@ export default function Chatbot() {
    *
    * `expo-speech` hanya punya satu antrean ucapan untuk seluruh aplikasi:
    * kalau tiap tombol punya instance sendiri, tombol kedua yang berbicara akan
-   * menghentikan yang pertama tanpa yang pertama tahu — ikonnya tertinggal
+   * menghentikan yang pertama tanpa yang pertama tahu, ikonnya tertinggal
    * pada keadaan "sedang membaca" selamanya.
    */
   const speech = useSpeech();
@@ -134,7 +134,7 @@ export default function Chatbot() {
        * Cache ditulis langsung, tidak sekadar di-invalidate.
        *
        * Pada pesan pertama, `setSesiId` membuat `sesiQ` hidup untuk kunci yang
-       * belum pernah terisi — dan sebuah query tanpa data awal berstatus
+       * belum pernah terisi, dan sebuah query tanpa data awal berstatus
        * `isLoading`, yang berarti gelembung pengguna dan balasan yang baru saja
        * tiba tergantikan spinner kosong tepat di detik jawabannya sampai.
        * Menanam hasilnya lebih dulu membuat peralihan itu tidak terlihat sama
@@ -179,7 +179,7 @@ export default function Chatbot() {
        *
        * Gagal 503 berarti layanan AI tidak menjawab dan pertanyaannya tidak
        * ikut tersimpan. Menghapus kalimat pengguna di titik itu berarti ia
-       * harus mendiktekan ulang seluruhnya — dan bagi pengguna yang memakai
+       * harus mendiktekan ulang seluruhnya, dan bagi pengguna yang memakai
        * suara justru karena kesulitan mengetik, itu kerugian yang nyata.
        *
        * Pengembaliannya bersyarat: kalau pengguna sudah mulai mengetik hal
@@ -191,7 +191,7 @@ export default function Chatbot() {
       setGalat(
         e instanceof ApiError
           ? e.layananAiMati
-            ? "Asisten sedang tidak dapat dihubungi. Pesan Anda dikembalikan ke kolom — coba kirim lagi sebentar lagi."
+            ? "Asisten sedang tidak dapat dihubungi. Pesan Anda dikembalikan ke kolom, coba kirim lagi sebentar lagi."
             : e.pesanUntukPengguna
           : "Pesan gagal dikirim.",
       );
@@ -204,7 +204,7 @@ export default function Chatbot() {
     setGalat("");
 
     // Kolom dikosongkan seketika, sebelum peladen menjawab: itulah yang membuat
-    // pesan terasa benar-benar terkirim. Isinya tidak hilang — `onError`
+    // pesan terasa benar-benar terkirim. Isinya tidak hilang, `onError`
     // mengembalikannya utuh bila pengiriman gagal.
     const a: Antrean = { konten, sumber: isi ? "ketik" : sumber };
     setAntrean(a);
@@ -214,10 +214,24 @@ export default function Chatbot() {
     kirim.mutate(a);
   };
 
-  // Transkrip suara masuk ke kolom teks, bukan langsung terkirim — pengguna
-  // memeriksa dan menyunting lebih dulu. Ini inti arsitektur cascaded §9.
+  /*
+    Transkrip suara masuk ke kolom teks, bukan langsung terkirim; pengguna
+    memeriksa dan menyunting lebih dulu. Ini inti arsitektur cascaded §9.
+
+    `useVoiceInput` adalah sistem di luar React — pengenal ucapan peramban atau
+    modul native — yang memuntahkan transkrip sepanjang pengguna berbicara.
+    Menyalurkannya ke state kolom teks memang pekerjaan sebuah efek, dan tidak
+    ada bentuk turunan yang bisa menggantikannya: begitu perekaman berhenti,
+    teksnya harus tetap tinggal di kolom dan bisa disunting.
+
+    Aturan lint di bawah dimatikan pada satu baris ini saja. Menghapus efeknya
+    menuntut `useVoiceInput` mengubah kontraknya menjadi berbasis callback —
+    perubahan yang menyentuh ketiga berkas hook, kedua platform, dan seluruh
+    pemakainya, dan tidak boleh dikerjakan tanpa pengujian di perangkat.
+  */
   useEffect(() => {
     if (suara.merekam && suara.teks) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- menyalurkan aliran transkrip dari sistem di luar React
       setTeks(suara.teks);
       setSumber("suara");
     }
@@ -285,31 +299,31 @@ export default function Chatbot() {
 
             {/*
               Pemantik dari peladen bila ada; kalau tidak, yang lokal.
-              Tidak pernah kosong — itu intinya.
+              Tidak pernah kosong, itu intinya.
             */}
             {(() => {
               const pemantik = (saranQ.data ?? []).length
                 ? (saranQ.data ?? [])
                 : PEMANTIK_CADANGAN;
               return (
-              <View style={styles.saranWrap}>
-                {pemantik.slice(0, 3).map((s) => (
-                  <Pressable
-                    key={s}
-                    style={styles.saran}
-                    onPress={() => kirimPesan(s)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Tanyakan: ${s}`}
-                  >
-                    <Feather
-                      name="message-square"
-                      size={15}
-                      color={colors.brand}
-                    />
-                    <Text style={styles.saranTeks}>{s}</Text>
-                  </Pressable>
-                ))}
-              </View>
+                <View style={styles.saranWrap}>
+                  {pemantik.slice(0, 3).map((s) => (
+                    <Pressable
+                      key={s}
+                      style={styles.saran}
+                      onPress={() => kirimPesan(s)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Tanyakan: ${s}`}
+                    >
+                      <Feather
+                        name="message-square"
+                        size={15}
+                        color={colors.brand}
+                      />
+                      <Text style={styles.saranTeks}>{s}</Text>
+                    </Pressable>
+                  ))}
+                </View>
               );
             })()}
           </View>
@@ -436,7 +450,7 @@ export default function Chatbot() {
  *
  * Rupanya sengaja sama persis dengan gelembung yang sudah terkirim, hanya
  * sedikit lebih pudar dan berpenanda jam. Yang perlu diyakinkan pengguna
- * adalah kalimatnya sudah berangkat — bukan bahwa sistemnya sedang sibuk;
+ * adalah kalimatnya sudah berangkat, bukan bahwa sistemnya sedang sibuk;
  * itu tugas titik-titik di bawahnya.
  */
 function GelembungAntrean({ antrean }: { antrean: Antrean }) {
@@ -485,10 +499,7 @@ function Gelembung({
 
   return (
     <View
-      style={[
-        styles.gelembungWrap,
-        dariPengguna ? styles.kanan : styles.kiri,
-      ]}
+      style={[styles.gelembungWrap, dariPengguna ? styles.kanan : styles.kiri]}
     >
       <View
         style={[
@@ -497,10 +508,7 @@ function Gelembung({
         ]}
       >
         <Text
-          style={[
-            styles.pesanTeks,
-            dariPengguna && { color: colors.white },
-          ]}
+          style={[styles.pesanTeks, dariPengguna && { color: colors.white }]}
         >
           {p.konten}
         </Text>

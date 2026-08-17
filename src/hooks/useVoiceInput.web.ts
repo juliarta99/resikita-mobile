@@ -5,7 +5,7 @@ import { BAHASA_STT, type HasilVoiceInput } from "@/types/suara";
 /**
  * Permukaan Web Speech API yang benar-benar dipakai di sini.
  *
- * Ditulis sendiri karena API ini belum masuk tipe DOM baku — ia masih berstatus
+ * Ditulis sendiri karena API ini belum masuk tipe DOM baku, ia masih berstatus
  * draf dan hanya diimplementasikan sebagian browser. Mendeklarasikan hanya
  * bagian yang dipakai lebih jujur daripada memaksakan `any`.
  */
@@ -66,7 +66,7 @@ export function useVoiceInput(): HasilVoiceInput {
 
   useEffect(() => {
     // Pengenal yang masih hidup akan terus memegang mikrofon setelah komponen
-    // hilang — di peramban itu tampak sebagai indikator merekam yang menyala
+    // hilang, di peramban itu tampak sebagai indikator merekam yang menyala
     // terus di tab, tanpa cara mematikannya selain menutup tab.
     return () => pengenalRef.current?.abort();
   }, []);

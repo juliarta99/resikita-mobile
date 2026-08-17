@@ -3,13 +3,13 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -21,6 +21,7 @@ import { daftarLaporan } from "@/lib/api/laporan";
 import { rupaStatus } from "@/lib/warnaStatus";
 import type { StatusLaporan } from "@/types/enums";
 import type { LaporanRingkas } from "@/types/laporan";
+import { urlMedia } from "@/lib/media";
 
 /** Ikon tiap status. Label dan warnanya datang dari peladen. */
 const IKON_STATUS: Record<StatusLaporan, keyof typeof Feather.glyphMap> = {
@@ -38,7 +39,7 @@ const IKON_STATUS: Record<StatusLaporan, keyof typeof Feather.glyphMap> = {
  *
  * Penyaringan dilakukan peladen lewat parameter `status`, bukan di klien.
  * Dengan daftar berhalaman, menyaring hasil yang sudah diunduh akan
- * menampilkan "3 laporan selesai" padahal yang benar 40 — klien hanya melihat
+ * menampilkan "3 laporan selesai" padahal yang benar 40, klien hanya melihat
  * halaman pertama.
  */
 const TAB: { kunci: string; label: string; status?: StatusLaporan }[] = [
@@ -215,11 +216,11 @@ function Kartu({ r }: { r: LaporanRingkas }) {
       accessibilityLabel={`${r.judul}, status ${r.status_label}, tiket ${r.tiket}`}
     >
       <View style={styles.kartuAtas}>
-        {/* `foto_utama` hanya ada bila laporannya memang berfoto — daftar ini
+        {/* `foto_utama` hanya ada bila laporannya memang berfoto, daftar ini
             memuat relasi foto justru untuk itu. */}
         {!!r.foto_utama && (
           <Image
-            source={{ uri: r.foto_utama }}
+            source={{ uri: urlMedia(r.foto_utama) }}
             style={styles.thumb}
             accessibilityIgnoresInvertColors
           />
@@ -245,7 +246,7 @@ function Kartu({ r }: { r: LaporanRingkas }) {
       {/*
         Kategori dan wilayah ditampilkan di kartu supaya pelapor mengenali
         laporannya tanpa membuka apa-apa. Daftar ini sengaja tidak memuat
-        penanggung jawab — kunci itu hanya ada pada bentuk lengkap (§3.5).
+        penanggung jawab, kunci itu hanya ada pada bentuk lengkap (§3.5).
       */}
       {(!!r.kategori?.nama || !!wilayah || !!r.alamat) && (
         <View style={styles.meta}>

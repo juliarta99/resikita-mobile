@@ -8,7 +8,7 @@ import { get, pastikanLarik } from "./client";
  * Ringkasan nasional untuk beranda.
  *
  * Di-cache 15 menit di peladen, jadi `staleTime` di sisi klien sebaiknya
- * mengikuti angka yang sama — memanggil lebih sering hanya menghabiskan kuota
+ * mengikuti angka yang sama, memanggil lebih sering hanya menghabiskan kuota
  * untuk jawaban yang identik.
  */
 export const statistikPublik = () => get<StatistikPublik>("/publik/statistik");

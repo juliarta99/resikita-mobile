@@ -45,7 +45,7 @@ export default function Pengaturan() {
         {/*
           Penghapusan akun dipisah ke kartunya sendiri di bagian paling bawah,
           dengan warna merah. Menaruhnya sebaris dengan menu biasa membuatnya
-          terlalu mudah tersentuh — dan ini satu-satunya aksi di layar ini yang
+          terlalu mudah tersentuh, dan ini satu-satunya aksi di layar ini yang
           tidak bisa dibatalkan.
         */}
         <View style={[styles.card, { marginTop: 16 }]}>

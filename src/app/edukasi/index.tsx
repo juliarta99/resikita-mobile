@@ -3,14 +3,14 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -23,6 +23,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { daftarArtikel, kategoriArtikel } from "@/lib/api/artikel";
 import { labelTipe, namaKategori } from "@/lib/artikel";
 import type { ArtikelRingkas } from "@/types/artikel";
+import { urlMedia } from "@/lib/media";
 
 export default function Edukasi() {
   const [kategori, setKategori] = useState<string | null>(null);
@@ -171,8 +172,8 @@ export default function Edukasi() {
  *
  * Bertipe `ArtikelRingkas` mengikuti apa yang benar-benar dikirim
  * `GET /artikel`: `kategori` berupa nama, dan `konten` maupun `didengarkan`
- * tidak ikut. Sebelumnya kartu ini dinyatakan sebagai `Artikel` — bentuk
- * detail — sehingga `kategori?.nama` selalu `undefined` dan lencananya tampil
+ * tidak ikut. Sebelumnya kartu ini dinyatakan sebagai `Artikel`, bentuk
+ * detail, sehingga `kategori?.nama` selalu `undefined` dan lencananya tampil
  * kosong tanpa satu pun galat.
  */
 function Kartu({ a }: { a: ArtikelRingkas }) {
@@ -197,7 +198,7 @@ function Kartu({ a }: { a: ArtikelRingkas }) {
       <View style={styles.gambar}>
         {a.thumbnail_url ? (
           <Image
-            source={{ uri: a.thumbnail_url }}
+            source={{ uri: urlMedia(a.thumbnail_url) }}
             style={styles.gambarIsi}
             accessibilityIgnoresInvertColors
           />

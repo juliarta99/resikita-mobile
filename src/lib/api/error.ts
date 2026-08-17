@@ -4,7 +4,7 @@ import type { ValidationErrors } from "@/types/api";
  * Galat API yang sudah dinormalkan.
  *
  * Tanpa ini, setiap layar menulis `e?.response?.data?.errors` sendiri dan harus
- * menebak bentuknya — pola yang menyebar di seluruh basis kode lama dan menjadi
+ * menebak bentuknya, pola yang menyebar di seluruh basis kode lama dan menjadi
  * salah satu sumber `any` terbanyak. Interceptor mengubah semua kegagalan
  * menjadi kelas ini, sehingga layar cukup memeriksa `instanceof ApiError`.
  */

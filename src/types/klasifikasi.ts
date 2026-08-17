@@ -45,7 +45,7 @@ export type ParamsRiwayatKlasifikasi = ParamsHalaman & {
 /**
  * `GET /klasifikasi/ringkasan` (§10.3).
  *
- * **Kelima kategori selalu dikembalikan**, termasuk yang jumlahnya nol — supaya
+ * **Kelima kategori selalu dikembalikan**, termasuk yang jumlahnya nol, supaya
  * grafik di klien tidak berubah bentuk dari satu pemuatan ke pemuatan lain.
  */
 export type RingkasanKlasifikasi = {

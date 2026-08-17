@@ -20,7 +20,7 @@ export type StatistikSaya = {
    * **`null` berarti tidak diketahui, bukan nol.** Tidak ada endpoint yang
    * mengembalikan akumulasi berat setoran pengguna; `GET /dompet/setoran`
    * berhalaman, dan menjumlahkan halaman pertama saja menghasilkan angka yang
-   * salah tapi tampak presisi — pengguna dengan 200 setoran akan melihat total
+   * salah tapi tampak presisi, pengguna dengan 200 setoran akan melihat total
    * yang dihitung dari 15 di antaranya.
    */
   totalSetorKg: number | null;
@@ -43,7 +43,7 @@ export function useStatistikSaya(aktif = true): StatistikSaya {
         enabled: aktif,
       },
       {
-        // `per_page: 1` — yang dibutuhkan hanya `meta.total`, bukan isinya.
+        // `per_page: 1`, yang dibutuhkan hanya `meta.total`, bukan isinya.
         queryKey: ["setoran", "jumlah"],
         queryFn: () => riwayatSetoran({ per_page: 1 }),
         enabled: aktif,

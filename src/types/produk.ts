@@ -1,11 +1,6 @@
 /** Marketplace: UMKM, produk, ulasan, keranjang, ongkir. Rujukan: §3.16, §8.5, §14–§16. */
 
-import type {
-  IsoDateTime,
-  ParamsHalaman,
-  ParamsLokasi,
-  Rupiah,
-} from "./api";
+import type { IsoDateTime, ParamsHalaman, ParamsLokasi, Rupiah } from "./api";
 import type { PenggunaRingkas } from "./auth";
 import type { StatusUmkm } from "./enums";
 import type { Wilayah } from "./wilayah";
@@ -50,7 +45,7 @@ export type FotoProduk = {
 export type Produk = {
   id: number;
   nama: string;
-  /** Kunci rute — `GET /produk/{slug}`, bukan `{id}`. */
+  /** Kunci rute, `GET /produk/{slug}`, bukan `{id}`. */
   slug: string;
   deskripsi: string | null;
   harga: Rupiah;
@@ -63,7 +58,7 @@ export type Produk = {
    */
   tersedia: boolean;
   berat_gram: number;
-  /** Asal bahan daur ulang — bagian dari nilai jual, bukan sekadar metadata. */
+  /** Asal bahan daur ulang, bagian dari nilai jual, bukan sekadar metadata. */
   bahan_baku: string | null;
   kategori?: KategoriProduk | null;
   umkm?: Umkm | null;
@@ -108,7 +103,7 @@ export type ItemKeranjang = {
   /** Id baris keranjang. Untuk menghapus dipakai `produk.slug`, bukan ini. */
   id: number;
   qty: number;
-  /** `harga × qty`. Pratinjau — total yang mengikat datang dari checkout. */
+  /** `harga × qty`. Pratinjau, total yang mengikat datang dari checkout. */
   subtotal: Rupiah;
   produk: Produk;
 };
@@ -117,7 +112,7 @@ export type ItemKeranjang = {
  * Isi keranjang milik satu toko.
  *
  * Peladen mengelompokkan keranjang per toko sejak awal, supaya pengguna melihat
- * bahwa belanja dari tiga toko berarti tiga ongkos kirim — bukan terkejut di
+ * bahwa belanja dari tiga toko berarti tiga ongkos kirim, bukan terkejut di
  * layar pembayaran.
  */
 export type KelompokKeranjang = {

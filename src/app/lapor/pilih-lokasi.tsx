@@ -5,7 +5,7 @@ import { alamatDariKoordinat } from "@/lib/geo";
 import { Feather } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -27,6 +27,23 @@ export default function PilihLokasi() {
   const [loadingGeo, setLoadingGeo] = useState(false);
   const mapRef = React.useRef<LeafletMapHandle>(null);
 
+  /*
+    Dideklarasikan **sebelum** efek yang memakainya, dan dibungkus `useCallback`
+    supaya identitasnya stabil sebagai dependensi. Sebelumnya `reverse` ditulis
+    di bawah efek dan dipanggil dari dalamnya — sah hanya karena efek berjalan
+    setelah render selesai. Ia bergantung pada urutan eksekusi, bukan pada
+    urutan yang terbaca, dan berhenti benar begitu pemanggilannya berpindah ke
+    badan komponen.
+  */
+  const reverse = useCallback(async (coord: { lat: number; lng: number }) => {
+    setLoadingGeo(true);
+    try {
+      setAlamat(await alamatDariKoordinat(coord.lat, coord.lng));
+    } finally {
+      setLoadingGeo(false);
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -35,19 +52,10 @@ export default function PilihLokasi() {
       const c = { lat: p.coords.latitude, lng: p.coords.longitude };
       setCenter(c);
       setPicked(c);
-      reverse(c);
+      void reverse(c);
       mapRef.current?.setView(c.lat, c.lng, 16);
     })();
-  }, []);
-
-  const reverse = async (coord: { lat: number; lng: number }) => {
-    setLoadingGeo(true);
-    try {
-      setAlamat(await alamatDariKoordinat(coord.lat, coord.lng));
-    } finally {
-      setLoadingGeo(false);
-    }
-  };
+  }, [reverse]);
 
   const onPick = (lat: number, lng: number) => {
     const c = { lat, lng };

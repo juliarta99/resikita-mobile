@@ -31,7 +31,7 @@ const BATAS_MS = 15_000;
  * empat sebab berbeda, dan tiga di antaranya tidak pernah melempar galat:
  *
  * 1. **Halaman disajikan lewat `http://` di alamat IP lokal.** Browser menolak
- *    `geolocation` di konteks yang tidak aman — hanya `https` dan `localhost`
+ *    `geolocation` di konteks yang tidak aman, hanya `https` dan `localhost`
  *    yang diizinkan. Ini kasus yang paling sering terjadi saat menguji Expo web
  *    dari ponsel di jaringan yang sama, dan `expo-location` di web hanya
  *    menggantung tanpa satu pun pesan.
@@ -47,7 +47,7 @@ const BATAS_MS = 15_000;
  *
  * Di web dipakai `navigator.geolocation` langsung, bukan `expo-location`:
  * pembungkusnya menambahkan lapisan yang menyembunyikan kode galat asli browser
- * — dan kode itulah yang membedakan "izin ditolak" dari "waktu habis".
+ *, dan kode itulah yang membedakan "izin ditolak" dari "waktu habis".
  */
 export async function deteksiPosisi(): Promise<Posisi> {
   if (Platform.OS === "web") return posisiWeb();
@@ -163,7 +163,8 @@ async function posisiNative(): Promise<Posisi> {
 function denganBatasWaktu<T>(janji: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((selesai, gagal) => {
     const pewaktu = setTimeout(
-      () => gagal(new GalatLokasi("waktu_habis", "Waktu deteksi lokasi habis.")),
+      () =>
+        gagal(new GalatLokasi("waktu_habis", "Waktu deteksi lokasi habis.")),
       ms,
     );
     janji.then(

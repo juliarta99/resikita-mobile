@@ -3,12 +3,12 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -22,33 +22,61 @@ import { useAuth } from "@/context/AuthContext";
 import { daftarPenugasan } from "@/lib/api/petugas";
 import { confirmDialog } from "@/lib/dialog";
 import { metaStatus } from "@/lib/statusLaporan";
-import type { StatusLaporan } from "@/types/enums";
+import type { StatusPenugasan } from "@/types/enums";
 import type { LeafletMarker } from "@/types/peta";
 import type { Penugasan } from "@/types/petugas";
 
 /**
- * Tab penyaring.
+ * Tab penyaring penugasan.
  *
- * "Perlu Dikerjakan" menggabungkan dua status karena bagi petugas keduanya
- * berarti hal yang sama: pekerjaan yang belum selesai. Yang membedakan hanya
- * apakah ia sudah menekan tombol mulai — dan itu urusan tampilan kartu, bukan
- * alasan memecah daftar tugasnya jadi dua tempat.
+ * `hanya_aktif` adalah **satu-satunya** penyaring yang diterima peladen.
+ *
+ * Tidak ada parameter `status` di `GET /petugas/penugasan`; versi sebelumnya
+ * mengirimkannya dan peladen mengabaikannya diam-diam, sehingga ketiga tab
+ * menampilkan daftar yang sama persis. Yang dipilih di sini adalah cakupan
+ * pengambilannya — aktif saja atau seluruh riwayat — lalu status persisnya
+ * disaring di perangkat, karena tiga tab ini memang tiga nilai dari satu
+ * cakupan yang sama.
  */
-const TAB: { kunci: string; label: string; status?: StatusLaporan }[] = [
-  { kunci: "aktif", label: "Perlu Dikerjakan", status: "ditugaskan" },
-  { kunci: "dikerjakan", label: "Berjalan", status: "dikerjakan" },
-  { kunci: "selesai", label: "Selesai", status: "selesai" },
+const TAB: {
+  kunci: string;
+  label: string;
+  status: StatusPenugasan;
+  hanyaAktif: boolean;
+}[] = [
+  {
+    kunci: "aktif",
+    label: "Perlu Dikerjakan",
+    status: "ditugaskan",
+    hanyaAktif: true,
+  },
+  {
+    kunci: "dikerjakan",
+    label: "Berjalan",
+    status: "dikerjakan",
+    hanyaAktif: true,
+  },
+  {
+    kunci: "selesai",
+    label: "Selesai",
+    status: "selesai",
+    hanyaAktif: false,
+  },
 ];
 
 export default function DaftarPenugasan() {
   const { user, keluar } = useAuth();
   const [tab, setTab] = useState("aktif");
   const [peta, setPeta] = useState(false);
-  const status = TAB.find((t) => t.kunci === tab)?.status;
+  const tabAktif = TAB.find((t) => t.kunci === tab) ?? TAB[0]!;
 
+  // Kunci query memakai cakupannya, bukan nama tab: "Perlu Dikerjakan" dan
+  // "Berjalan" mengambil data yang sama persis, jadi berpindah di antara
+  // keduanya tidak perlu menembak peladen lagi.
   const q = useInfiniteQuery({
-    queryKey: ["petugas", "penugasan", tab],
-    queryFn: ({ pageParam }) => daftarPenugasan({ page: pageParam, status }),
+    queryKey: ["petugas", "penugasan", tabAktif.hanyaAktif],
+    queryFn: ({ pageParam }) =>
+      daftarPenugasan({ page: pageParam, hanya_aktif: tabAktif.hanyaAktif }),
     initialPageParam: 1,
     getNextPageParam: (h) =>
       h.meta.current_page < h.meta.last_page
@@ -56,28 +84,36 @@ export default function DaftarPenugasan() {
         : undefined,
   });
 
-  const daftar = q.data?.pages.flatMap((h) => h.data) ?? [];
+  const daftar = (q.data?.pages.flatMap((h) => h.data) ?? []).filter(
+    (p) => p.status === tabAktif.status,
+  );
 
   /**
    * Penanda peta untuk seluruh penugasan yang sudah dimuat.
    *
    * Daftar berurut waktu tidak membantu petugas yang harus berkeliling: dua
    * laporan berdekatan bisa terpisah sepuluh baris. Peta menjawab pertanyaan
-   * yang sebenarnya ia punya — mana yang searah, mana yang bisa sekali jalan.
+   * yang sebenarnya ia punya, mana yang searah, mana yang bisa sekali jalan.
    */
-  const titik = daftar.filter(
-    (p) =>
-      Number.isFinite(p.laporan.latitude) &&
-      Number.isFinite(p.laporan.longitude),
-  );
-  const penanda: LeafletMarker[] = titik.map((p) => ({
-    id: p.id,
-    lat: p.laporan.latitude,
-    lng: p.laporan.longitude,
-    color: p.status === "dikerjakan" ? "amber" : "red",
+  // `laporan` adalah relasi dan boleh tidak ikut termuat. Ia disempitkan sekali
+  // di sini menjadi bentuk yang pasti punya koordinat, supaya sisa berkas tidak
+  // perlu memeriksa keberadaannya berulang kali.
+  const titik = daftar.flatMap((p) => {
+    const l = p.laporan;
+    if (!l || !Number.isFinite(l.latitude) || !Number.isFinite(l.longitude)) {
+      return [];
+    }
+    return [{ id: p.id, status: p.status, lat: l.latitude, lng: l.longitude }];
+  });
+
+  const penanda: LeafletMarker[] = titik.map((t) => ({
+    id: t.id,
+    lat: t.lat,
+    lng: t.lng,
+    color: t.status === "dikerjakan" ? "amber" : "red",
   }));
   const pusat = titik[0]
-    ? { lat: titik[0].laporan.latitude, lng: titik[0].laporan.longitude }
+    ? { lat: titik[0].lat, lng: titik[0].lng }
     : TENGAH_NUSANTARA;
 
   return (
@@ -85,7 +121,7 @@ export default function DaftarPenugasan() {
       {/*
         Tidak ada tombol "kembali" di sini: layar ini adalah beranda bagi akun
         petugas, dan menaruh panah yang tidak menuju ke mana pun hanya
-        membingungkan. Yang ia butuhkan justru jalan keluar — untuk berganti ke
+        membingungkan. Yang ia butuhkan justru jalan keluar, untuk berganti ke
         akun wargannya.
       */}
       <View style={styles.appbar}>
@@ -228,6 +264,11 @@ function Kartu({ p }: { p: Penugasan }) {
   const s = metaStatus(p.status);
   const l = p.laporan;
 
+  // Penugasan tanpa relasi `laporan` tidak punya apa pun untuk ditampilkan —
+  // tidak judul, tidak tiket, tidak alamat. Melewatinya lebih jujur daripada
+  // menyajikan kartu berisi "undefined" di setiap barisnya.
+  if (!l) return null;
+
   return (
     <Pressable
       style={styles.kartu}
@@ -260,11 +301,13 @@ function Kartu({ p }: { p: Penugasan }) {
         <Feather name="clock" size={13} color={colors.subtext} />
         <Text style={styles.barisTeks}>
           Dilaporkan{" "}
-          {new Date(l.created_at).toLocaleDateString("id-ID", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
+          {l.created_at
+            ? new Date(l.created_at).toLocaleDateString("id-ID", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })
+            : "pada tanggal yang tidak tercatat"}
         </Text>
       </View>
     </Pressable>

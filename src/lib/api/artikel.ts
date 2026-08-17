@@ -1,11 +1,11 @@
 /** Artikel edukasi. Rujukan: API-DOCS.md §7. */
 
 import type {
-  Artikel,
-  ArtikelRingkas,
-  KategoriArtikel,
-  ParamsArtikel,
-  TeksBaca,
+    Artikel,
+    ArtikelRingkas,
+    KategoriArtikel,
+    ParamsArtikel,
+    TeksBaca,
 } from "@/types/artikel";
 import { get, pastikanHalaman, pastikanLarik } from "./client";
 
@@ -14,7 +14,7 @@ import { get, pastikanHalaman, pastikanLarik } from "./client";
  *
  * Yang dikembalikan adalah bentuk **ringkas**: `cuplikan` menggantikan `konten`,
  * dan `kategori` berupa nama saja. Kalau layar butuh isi lengkapnya, ia harus
- * membuka detail — daftar sengaja dibuat ringan untuk jaringan seluler.
+ * membuka detail, daftar sengaja dibuat ringan untuk jaringan seluler.
  */
 export const daftarArtikel = (params?: ParamsArtikel) =>
   get<unknown>("/artikel", {
@@ -32,7 +32,7 @@ export const detailArtikel = (slug: string) => get<Artikel>(`/artikel/${slug}`);
 /**
  * Teks bersih untuk dibacakan TTS.
  *
- * Panggil hanya saat pemutar suara benar-benar dinyalakan — pemanggilannya
+ * Panggil hanya saat pemutar suara benar-benar dinyalakan, pemanggilannya
  * sekaligus mencatat pemakaian fitur suara, jadi memuatnya di awal bersama
  * detail artikel akan menggelembungkan metrik dengan pengguna yang tidak pernah
  * menekan tombol putar.

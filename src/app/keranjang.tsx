@@ -1,13 +1,13 @@
 import { Feather } from "@expo/vector-icons";
 import { type Href, router } from "expo-router";
 import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -21,6 +21,7 @@ import { useKeranjang } from "@/hooks/useKeranjang";
 import { confirmDialog } from "@/lib/dialog";
 import { formatRupiah } from "@/lib/rupiah";
 import type { ItemKeranjang, KelompokKeranjang } from "@/types/produk";
+import { urlMedia } from "@/lib/media";
 
 export default function Keranjang() {
   const k = useKeranjang();
@@ -53,7 +54,10 @@ export default function Keranjang() {
     return (
       <SafeAreaView style={styles.screen} edges={["top"]}>
         {appbar}
-        <ErrorState error={k.query.error} onCobaLagi={() => k.query.refetch()} />
+        <ErrorState
+          error={k.query.error}
+          onCobaLagi={() => k.query.refetch()}
+        />
       </SafeAreaView>
     );
   }
@@ -84,7 +88,7 @@ export default function Keranjang() {
           Satu kartu per toko, tapi **satu** tombol checkout untuk semuanya.
           Peladen memecah belanja lintas toko menjadi beberapa pesanan sendiri
           dan menuntut pilihan pengiriman untuk *setiap* toko dalam satu
-          permintaan — checkout per toko yang dulu ada di sini selalu ditolak
+          permintaan, checkout per toko yang dulu ada di sini selalu ditolak
           karena toko lain di keranjang tidak ikut disebutkan.
         */}
         {k.toko.map((t) => (
@@ -147,7 +151,7 @@ function KartuToko({
         <View style={styles.tokoLogo}>
           {t.umkm?.foto_url ? (
             <Image
-              source={{ uri: t.umkm.foto_url }}
+              source={{ uri: urlMedia(t.umkm.foto_url) }}
               style={styles.tokoLogoIsi}
               accessibilityIgnoresInvertColors
             />
@@ -192,7 +196,7 @@ function BarisItem({
       `${p?.nama ?? "Produk ini"} akan dikeluarkan dari keranjang.`,
       "Hapus",
     );
-    // Kuncinya slug produk — bukan `it.id`, yang adalah id baris keranjang.
+    // Kuncinya slug produk, bukan `it.id`, yang adalah id baris keranjang.
     if (yakin && p?.slug) k.hapus.mutate(p.slug);
   };
 
@@ -206,7 +210,7 @@ function BarisItem({
       <View style={styles.gambar}>
         {p?.foto_utama_url ? (
           <Image
-            source={{ uri: p.foto_utama_url }}
+            source={{ uri: urlMedia(p.foto_utama_url) }}
             style={styles.gambarIsi}
             accessibilityIgnoresInvertColors
           />
@@ -224,8 +228,8 @@ function BarisItem({
         {tidakTersedia && (
           <Text style={styles.peringatanStok}>
             {stok > 0
-              ? "Sedang tidak dijual — akan dikeluarkan saat checkout."
-              : "Stok habis — hapus dari keranjang untuk melanjutkan."}
+              ? "Sedang tidak dijual, akan dikeluarkan saat checkout."
+              : "Stok habis, hapus dari keranjang untuk melanjutkan."}
           </Text>
         )}
 

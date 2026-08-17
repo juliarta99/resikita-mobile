@@ -1,6 +1,6 @@
-import type { Feather } from "@expo/vector-icons";
 import { colors } from "@/constants/theme";
 import type { AlasanRouting, StatusLaporan } from "@/types/enums";
+import type { Feather } from "@expo/vector-icons";
 
 export type MetaStatus = {
   label: string;
@@ -12,8 +12,8 @@ export type MetaStatus = {
 /**
  * Rupa ketujuh status laporan.
  *
- * Versi sebelumnya menangani `menunggu` dan `proses` — dua nilai yang tidak ada
- * di enum manapun — sementara `dikerjakan` dan `digabung` yang benar-benar
+ * Versi sebelumnya menangani `menunggu` dan `proses`, dua nilai yang tidak ada
+ * di enum manapun, sementara `dikerjakan` dan `digabung` yang benar-benar
  * dikirim peladen jatuh ke cadangan tanpa label. Akibatnya pelapor melihat kata
  * mentah `dikerjakan` di layar, dan penyaring "Diproses" melewatkan justru
  * laporan yang sedang dikerjakan.

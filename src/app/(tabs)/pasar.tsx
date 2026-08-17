@@ -3,14 +3,14 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -23,11 +23,12 @@ import { useKeranjang } from "@/hooks/useKeranjang";
 import { daftarProduk, kategoriProduk } from "@/lib/api/produk";
 import { formatRupiah } from "@/lib/rupiah";
 import type { Produk } from "@/types/produk";
+import { urlMedia } from "@/lib/media";
 
 export default function Pasar() {
   const insets = useSafeAreaInsets();
   const keranjang = useKeranjang();
-  // Penyaring kategori memakai **slug**, bukan id — `kategori_id` yang dulu
+  // Penyaring kategori memakai **slug**, bukan id, `kategori_id` yang dulu
   // dikirim di sini tidak dikenali peladen dan diabaikan diam-diam, sehingga
   // memilih kategori apa pun tetap menampilkan seluruh produk.
   const [kategoriSlug, setKategoriSlug] = useState<string | null>(null);
@@ -144,7 +145,9 @@ export default function Pasar() {
           keyExtractor={(p) => p.slug}
           numColumns={2}
           columnWrapperStyle={
-            produk.length > 0 ? { gap: 12, paddingHorizontal: spacing.md } : undefined
+            produk.length > 0
+              ? { gap: 12, paddingHorizontal: spacing.md }
+              : undefined
           }
           contentContainerStyle={
             produk.length === 0
@@ -178,7 +181,9 @@ export default function Pasar() {
                   : "Produk dari UMKM binaan akan muncul di sini."
               }
               aksiLabel={
-                cariTertunda.trim() || kategoriSlug ? "Tampilkan semua" : undefined
+                cariTertunda.trim() || kategoriSlug
+                  ? "Tampilkan semua"
+                  : undefined
               }
               onAksi={
                 cariTertunda.trim() || kategoriSlug
@@ -210,7 +215,7 @@ function KartuProduk({ p }: { p: Produk }) {
       <View style={styles.gambar}>
         {p.foto_utama_url ? (
           <Image
-            source={{ uri: p.foto_utama_url }}
+            source={{ uri: urlMedia(p.foto_utama_url) }}
             style={styles.gambarIsi}
             accessibilityIgnoresInvertColors
           />

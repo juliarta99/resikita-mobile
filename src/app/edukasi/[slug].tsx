@@ -18,6 +18,7 @@ import LoadingState from "@/components/states/LoadingState";
 import { colors, radius, spacing } from "@/constants/theme";
 import { detailArtikel } from "@/lib/api/artikel";
 import { markdownKeHtml } from "@/lib/markdown";
+import { urlMedia } from "@/lib/media";
 
 export default function DetailEdukasi() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -61,11 +62,18 @@ export default function DetailEdukasi() {
   }
 
   const a = q.data;
-  const tanggal = new Date(a.published_at).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  // `published_at` boleh `null` untuk artikel yang belum terbit. `new Date(null)`
+  // tidak melempar galat, ia menghasilkan 1 Januari 1970 — tanggal yang tampak
+  // sah sehingga tidak ada yang curiga artikelnya belum bertanggal.
+  const terbit = a.published_at ? new Date(a.published_at) : null;
+  const tanggal =
+    terbit && !Number.isNaN(terbit.getTime())
+      ? terbit.toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })
+      : "Belum terbit";
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
@@ -73,7 +81,7 @@ export default function DetailEdukasi() {
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         <ImageBackground
-          source={a.thumbnail_url ? { uri: a.thumbnail_url } : undefined}
+          source={a.thumbnail_url ? { uri: urlMedia(a.thumbnail_url) } : undefined}
           style={styles.hero}
           imageStyle={{ resizeMode: "cover" }}
         >

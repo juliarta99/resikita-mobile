@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -20,11 +21,11 @@ import { WilayahPicker } from "@/components/WilayahPicker";
 import { colors, radius, spacing } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { useWilayah } from "@/hooks/useWilayah";
-import { ubahAvatar, ubahProfil } from "@/lib/api/auth";
+import { ubahProfil, ubahProfilDenganAvatar } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/error";
 import { notify } from "@/lib/dialog";
-import { Image } from "react-native";
 import type { IsoDate } from "@/types/api";
+import { urlMedia } from "@/lib/media";
 
 const initials = (name: string) =>
   name
@@ -59,8 +60,18 @@ export default function EditProfil() {
   const [errorField, setErrorField] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
 
+  /**
+   * Tidak ada endpoint `/profil/avatar` terpisah.
+   *
+   * Avatar adalah salah satu field profil, jadi ia dikirim lewat `PUT /profil`
+   * yang sama, dalam bentuk multipart. Badan `{}` di sini disengaja: dokumen
+   * menyatakan seluruh field profil opsional dan hanya yang dikirim yang
+   * diperbarui, sehingga mengunggah foto tidak menyentuh nama, telepon, maupun
+   * domisili — termasuk suntingan yang sedang terbuka di layar dan belum
+   * disimpan.
+   */
   const gantiAvatar = useMutation({
-    mutationFn: (uri: string) => ubahAvatar(uri),
+    mutationFn: (uri: string) => ubahProfilDenganAvatar({}, uri),
     onSuccess: async () => {
       await refresh();
       notify("Tersimpan", "Foto profil Anda sudah diperbarui.");
@@ -138,7 +149,18 @@ export default function EditProfil() {
     simpan.mutate();
   };
 
-  const wilayahTersimpan = user?.wilayah?.desa?.nama;
+  /**
+   * `user.wilayah` adalah **satu** objek Wilayah di tingkat desa, bukan struktur
+   * bertingkat empat. Versi sebelumnya membaca `.desa.nama` — kunci yang tidak
+   * pernah ada di sana — sehingga nilainya selalu `undefined` dan kartu domisili
+   * menyatakan "Belum diisi" bahkan kepada pengguna yang domisilinya sudah
+   * tersimpan.
+   *
+   * `nama_lengkap` sudah dirangkai peladen. Merangkainya sendiri dari `nama` dan
+   * `tingkat_label` menghasilkan "Kabupaten Kabupaten Badung" untuk wilayah yang
+   * namanya memang memuat sebutan tingkatnya.
+   */
+  const wilayahTersimpan = user?.wilayah?.nama_lengkap;
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
@@ -173,7 +195,7 @@ export default function EditProfil() {
               <ActivityIndicator color={colors.white} />
             ) : user?.avatar_url ? (
               <Image
-                source={{ uri: user.avatar_url }}
+                source={{ uri: urlMedia(user.avatar_url) }}
                 style={styles.avatarFoto}
                 accessibilityIgnoresInvertColors
               />
@@ -228,33 +250,45 @@ export default function EditProfil() {
               diketik manual adalah sumber galat 422 yang tidak perlu, dan
               tidak ada cara pengguna menebak formatnya tanpa diberi tahu.
             */}
-            <Pressable
-              style={styles.dateBox}
-              onPress={() => setShowDate(true)}
-              accessibilityRole="button"
-              accessibilityLabel={
-                tgl
-                  ? `Tanggal lahir ${keIsoDate(tgl)}. Ketuk untuk mengubah`
-                  : "Pilih tanggal lahir"
-              }
-            >
-              <Text style={{ color: tgl ? colors.text : "#9AA5B1", fontSize: 15 }}>
-                {tgl ? keIsoDate(tgl) : "Pilih tanggal"}
-              </Text>
+            {/*
+              Kotaknya sekadar `View`; dua kendali di dalamnya bersaudara, bukan
+              bersarang. Sebelumnya tombol hapus berada **di dalam** kotak yang
+              juga sebuah tombol, dan react-native-web menerjemahkan keduanya
+              menjadi elemen `<button>` sungguhan — `<button>` di dalam
+              `<button>` adalah HTML tidak sah yang memicu galat hidrasi React.
+              Menjadikannya bersaudara juga menghapus kebutuhan akan
+              `stopPropagation`, karena tidak ada lagi induk yang bisa menangkap
+              ketukan yang sama.
+            */}
+            <View style={styles.dateBox}>
+              <Pressable
+                style={styles.datePilih}
+                onPress={() => setShowDate(true)}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  tgl
+                    ? `Tanggal lahir ${keIsoDate(tgl)}. Ketuk untuk mengubah`
+                    : "Pilih tanggal lahir"
+                }
+              >
+                <Text
+                  style={{ color: tgl ? colors.text : "#9AA5B1", fontSize: 15 }}
+                >
+                  {tgl ? keIsoDate(tgl) : "Pilih tanggal"}
+                </Text>
+              </Pressable>
               {!!tgl && (
                 <Pressable
-                  onPress={(e) => {
-                    e?.stopPropagation?.();
-                    setTgl(null);
-                  }}
+                  onPress={() => setTgl(null)}
                   hitSlop={10}
+                  style={styles.dateHapus}
                   accessibilityRole="button"
                   accessibilityLabel="Hapus tanggal lahir"
                 >
                   <Feather name="x" size={16} color={colors.subtext} />
                 </Pressable>
               )}
-            </Pressable>
+            </View>
             {showDate && (
               <DateTimePicker
                 value={tgl ?? new Date(2000, 0, 1)}
@@ -298,6 +332,14 @@ export default function EditProfil() {
               ? "Menentukan fasilitas mana yang ditampilkan dan menajamkan jawaban asisten."
               : "Belum diisi. Melengkapinya membuat fasilitas terdekat dan jawaban asisten lebih relevan."}
           </Text>
+          {!!wilayahTersimpan && (
+            <View style={styles.wilayahKini}>
+              <Feather name="map-pin" size={14} color={colors.brand} />
+              <Text style={styles.wilayahKiniTeks} numberOfLines={2}>
+                {wilayahTersimpan}
+              </Text>
+            </View>
+          )}
           <WilayahPicker wilayah={wilayah} />
           {!!errorField.wilayah_id && (
             <Text style={styles.errField}>{errorField.wilayah_id}</Text>
@@ -467,6 +509,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 48,
     backgroundColor: colors.white,
+  },
+  // Mengisi seluruh sisa kotak supaya area ketuk untuk membuka pemilih tanggal
+  // tetap selebar dulu, bukan menyusut sebesar teksnya saja.
+  wilayahKini: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#EAF7F1",
+    borderRadius: radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  wilayahKiniTeks: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.brand,
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+  datePilih: { flex: 1, height: "100%", justifyContent: "center" },
+  dateHapus: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
   },
   jkRow: { flexDirection: "row", gap: 12 },
   jkBtn: {

@@ -8,7 +8,7 @@ import type { StatusRegistrasiWilayah, TingkatWilayah } from "./enums";
  * `parent` adalah **relasi**: ia hadir hanya pada endpoint yang memuatnya
  * (`/wilayah/{id}`, `/wilayah/cari`, `/wilayah/terdekat`) dan tidak ada sama
  * sekali pada `/wilayah/provinsi` maupun `/wilayah/{id}/anak`. Jangan
- * memperlakukan ketiadaannya sebagai "wilayah tanpa induk" — lihat §1.8.
+ * memperlakukan ketiadaannya sebagai "wilayah tanpa induk", lihat §1.8.
  */
 export type Wilayah = {
   id: number;
@@ -44,7 +44,7 @@ export type WilayahBertingkat = {
 export type ResolusiWilayah = WilayahBertingkat & {
   /**
    * `false` berarti koordinatnya tidak jatuh di wilayah terdaftar mana pun
-   * dalam radius resolusi. Laporan tetap boleh dikirim — ia diteruskan ke
+   * dalam radius resolusi. Laporan tetap boleh dikirim, ia diteruskan ke
    * Fasilitator Wilayah.
    */
   ditemukan: boolean;

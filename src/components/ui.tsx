@@ -2,14 +2,14 @@ import { colors, radius, spacing } from "@/constants/theme";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  TextInputProps,
-  View,
-  ViewStyle,
+    ActivityIndicator,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    TextInputProps,
+    View,
+    ViewStyle,
 } from "react-native";
 
 export function Card({
@@ -87,7 +87,7 @@ export function Button({
  * Pembungkus satu baris formulir: label, isi, dan pesan galatnya.
  *
  * Dipakai `Field` di bawah, dan bisa dipakai langsung untuk kontrol yang bukan
- * `TextInput` — pemilih kategori, pemilih wilayah, daftar kurir. Sebelumnya
+ * `TextInput`, pemilih kategori, pemilih wilayah, daftar kurir. Sebelumnya
  * kontrol semacam itu tidak punya cara menandai dirinya salah sama sekali,
  * sehingga galatnya selalu terdampar di pesan umum di atas tombol kirim.
  */
@@ -189,7 +189,7 @@ export function Field({
  * formulir yang panjang, pesan di bawah muncul di luar layar tepat ketika
  * pengguna menekan tombolnya, dan kegagalannya terasa seperti tombol yang tidak
  * berfungsi. Yang di sini hanya untuk galat jaringan, `403`, dan pelanggaran
- * aturan bisnis — galat per field ditempelkan di bawah inputnya sendiri.
+ * aturan bisnis, galat per field ditempelkan di bawah inputnya sendiri.
  */
 export function PesanGalat({
   pesan,

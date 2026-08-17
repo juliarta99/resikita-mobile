@@ -6,7 +6,7 @@ import { Platform } from "react-native";
  * Header untuk permintaan ke Nominatim.
  *
  * Kebijakan pemakaian Nominatim menuntut setiap permintaan membawa pengenal
- * aplikasi, dan permintaan tanpa itu boleh ditolak — bukan hari ini, tapi kapan
+ * aplikasi, dan permintaan tanpa itu boleh ditolak, bukan hari ini, tapi kapan
  * saja mereka memutuskan menegakkannya, dan pada saat itu geocode balik di web
  * akan diam-diam jatuh ke koordinat mentah tanpa penyebab yang kelihatan.
  *
@@ -53,11 +53,11 @@ function rangkaiAlamatExpo(a?: Location.LocationGeocodedAddress): string {
  *
  * Tiga lapis, dan ketiganya perlu:
  *
- * 1. `expo-location` — bekerja di Android dan iOS memakai layanan bawaan sistem.
- * 2. Nominatim OpenStreetMap — di web, `reverseGeocodeAsync` mengembalikan larik
+ * 1. `expo-location`, bekerja di Android dan iOS memakai layanan bawaan sistem.
+ * 2. Nominatim OpenStreetMap, di web, `reverseGeocodeAsync` mengembalikan larik
  *    kosong tanpa Google API key. Bukan galat, hanya kosong, sehingga
  *    kegagalannya senyap dan dulu tampak seperti "alamat tidak terdeteksi".
- * 3. Koordinat mentah — supaya fungsi ini **selalu** menghasilkan sesuatu.
+ * 3. Koordinat mentah, supaya fungsi ini **selalu** menghasilkan sesuatu.
  *
  * Lapis ketiga itu yang membuat pemanggil bisa mematikan spinner tanpa syarat.
  * Versi sebelumnya bisa menggantung selamanya kalau Nominatim tidak menjawab;
@@ -75,7 +75,7 @@ export async function alamatDariKoordinat(
     const alamat = rangkaiAlamatExpo(hasil?.[0]);
     if (alamat) return alamat;
   } catch {
-    // Izin ditolak atau layanan tidak tersedia — lanjut ke lapis berikutnya.
+    // Izin ditolak atau layanan tidak tersedia, lanjut ke lapis berikutnya.
   }
 
   try {
@@ -96,7 +96,7 @@ export async function alamatDariKoordinat(
       return json.display_name;
     }
   } catch {
-    // Jaringan mati atau melewati batas waktu — jatuh ke koordinat.
+    // Jaringan mati atau melewati batas waktu, jatuh ke koordinat.
   }
 
   return `Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`;

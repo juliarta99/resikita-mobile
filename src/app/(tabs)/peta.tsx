@@ -3,12 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import React, { useState } from "react";
 import {
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -35,7 +35,7 @@ const ZOOM_SAYA = 13;
  * Bentuk seragam untuk daftar dan penanda, apa pun tab yang aktif.
  *
  * Setiap titik **selalu** punya halaman detail. Versi sebelumnya mengambil
- * titik dari `GET /publik/peta`, yang sengaja tidak mengirim `id` — akibatnya
+ * titik dari `GET /publik/peta`, yang sengaja tidak mengirim `id`, akibatnya
  * kartu fasilitas tidak bisa dibuka sama sekali dan ketukannya jatuh ke
  * aplikasi peta, sehingga halaman detail TPS beserta tombol "Gabung" praktis
  * hilang dari aplikasi. Direktori (§8) terbuka tanpa token seperti `/publik/peta`
@@ -60,9 +60,10 @@ export default function Peta() {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>("tps");
   const [cari, setCari] = useState("");
-  const [koordinat, setKoordinat] = useState<{ lat: number; lng: number } | null>(
-    null,
-  );
+  const [koordinat, setKoordinat] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [galatLokasi, setGalatLokasi] = useState("");
   const [mendeteksi, setMendeteksi] = useState(false);
   const mapRef = React.useRef<LeafletMapHandle>(null);
@@ -72,7 +73,7 @@ export default function Peta() {
    *
    * Peta sudah menampilkan sesuatu yang berguna tanpa izin apa pun, jadi
    * memintanya di detik pertama berarti meminta sebelum pengguna tahu untuk apa
-   * — dan penolakan di titik itu biasanya permanen.
+   *, dan penolakan di titik itu biasanya permanen.
    *
    * Yang dilakukannya hanya menggeser dan memperbesar peta ke posisi pengguna,
    * lalu menandainya. Daftar fasilitas **tidak** ikut berubah.
@@ -97,7 +98,7 @@ export default function Peta() {
    * Koordinat pengguna **sengaja tidak dikirim** ke peladen. Penyaring
    * `latitude`/`longitude`/`radius_km` menjatuhkan direktori ke galat SQL, dan
    * bahkan ketika ia bekerja, hasilnya menyembunyikan fasilitas di luar radius
-   * — padahal warga yang membuka peta justru ingin tahu apa saja yang ada,
+   *, padahal warga yang membuka peta justru ingin tahu apa saja yang ada,
    * termasuk unit di kota sebelah yang harganya lebih baik. Lokasi kini hanya
    * mengarahkan pandangan peta, bukan memotong datanya.
    *
@@ -136,14 +137,14 @@ export default function Peta() {
    * `queryFn` di atas sudah mengembalikan `halaman.data`, tapi cache TanStack
    * bisa memegang hasil dari bentuk sebelumnya selama sesi pengembangan, dan
    * peladen sendiri pernah mengirim daftar yang tidak berhalaman. Keduanya
-   * berujung pada satu galat yang sama — `fasilitas.filter is not a function` —
+   * berujung pada satu galat yang sama, `fasilitas.filter is not a function`,
    * yang mematikan seluruh tab peta, bukan sekadar mengosongkan daftarnya.
    * Penjaga ini menukar kegagalan total itu dengan daftar kosong.
    */
   const fasilitas: (Tps | BankSampah)[] = Array.isArray(q.data)
     ? q.data
     : Array.isArray((q.data as { data?: unknown } | undefined)?.data)
-      ? ((q.data as unknown as { data: (Tps | BankSampah)[] }).data)
+      ? (q.data as unknown as { data: (Tps | BankSampah)[] }).data
       : [];
 
   const titik: Titik[] = fasilitas
@@ -168,12 +169,10 @@ export default function Peta() {
             ? tarif != null && tarif > 0
               ? `${jenisLabel ?? "TPS"} · ${formatRupiah(tarif)}/bulan`
               : `${jenisLabel ?? "TPS"} · Tanpa iuran`
-            : ((f as BankSampah).jumlah_jenis_harga != null
-                ? `${(f as BankSampah).jumlah_jenis_harga} jenis sampah dibeli`
-                : null),
-        rute: (tab === "tps"
-          ? `/tps/${f.id}`
-          : `/bank-sampah/${f.id}`) as Href,
+            : (f as BankSampah).jumlah_jenis_harga != null
+              ? `${(f as BankSampah).jumlah_jenis_harga} jenis sampah dibeli`
+              : null,
+        rute: (tab === "tps" ? `/tps/${f.id}` : `/bank-sampah/${f.id}`) as Href,
       };
     });
 
@@ -193,7 +192,12 @@ export default function Peta() {
     color: tab === "tps" ? "green" : "blue",
   }));
   if (koordinat) {
-    penanda.push({ id: "saya", lat: koordinat.lat, lng: koordinat.lng, color: "amber" });
+    penanda.push({
+      id: "saya",
+      lat: koordinat.lat,
+      lng: koordinat.lng,
+      color: "amber",
+    });
   }
 
   const pusat =
@@ -230,7 +234,9 @@ export default function Peta() {
                 accessibilityLabel={`Tampilkan ${label}`}
                 accessibilityState={{ selected: aktif }}
               >
-                <Text style={[styles.tabTeks, aktif && { color: colors.white }]}>
+                <Text
+                  style={[styles.tabTeks, aktif && { color: colors.white }]}
+                >
                   {label}
                 </Text>
               </Pressable>
@@ -247,7 +253,7 @@ export default function Peta() {
           zoom={koordinat ? ZOOM_SAYA : ZOOM_NASIONAL}
           markers={penanda}
           /*
-            Penanda di peta membuka aplikasi peta perangkat pada koordinatnya —
+            Penanda di peta membuka aplikasi peta perangkat pada koordinatnya,
             bukan halaman detail. Pembagiannya disengaja: pin adalah objek
             geografis, jadi ketukannya menjawab "di mana ini?"; kartu di bawah
             adalah objek data, jadi ketukannya menjawab "apa ini?".
@@ -292,7 +298,7 @@ export default function Peta() {
           <View style={styles.izinKotak}>
             <Feather name="info" size={15} color="#8A6D1B" />
             <Text style={styles.izinTeks}>
-              {galatLokasi} Daftar fasilitas di bawah tetap lengkap — lokasi
+              {galatLokasi} Daftar fasilitas di bawah tetap lengkap, lokasi
               hanya dipakai untuk mengarahkan peta.
             </Text>
           </View>
@@ -301,7 +307,10 @@ export default function Peta() {
         {aktifQ.isLoading ? (
           <LoadingState pesan="Memuat lokasi…" />
         ) : aktifQ.isError ? (
-          <ErrorState error={aktifQ.error} onCobaLagi={() => aktifQ.refetch()} />
+          <ErrorState
+            error={aktifQ.error}
+            onCobaLagi={() => aktifQ.refetch()}
+          />
         ) : (
           <FlatList
             data={tersaring}
@@ -314,13 +323,22 @@ export default function Peta() {
             renderItem={({ item }) => (
               /*
                 Kartu selalu menuju halaman detail. Di sanalah keanggotaan TPS
-                bisa didaftarkan dan katalog harga bank sampah dibaca — dua hal
+                bisa didaftarkan dan katalog harga bank sampah dibaca, dua hal
                 yang tidak mungkin dilakukan di aplikasi peta perangkat.
               */
               <Pressable
                 style={[styles.kartu, item.anggota && styles.kartuAnggota]}
                 onPress={() => router.push(item.rute)}
-                accessibilityRole="button"
+                /*
+                  Perannya `link`, bukan `button`, karena kartu ini memuat tombol
+                  pintasan ke aplikasi peta di dalamnya. react-native-web
+                  menerjemahkan `accessibilityRole="button"` menjadi elemen
+                  `<button>` sungguhan, dan `<button>` di dalam `<button>` adalah
+                  HTML tidak sah yang memicu galat hidrasi React. Sebagai `link`
+                  ia menjadi `<a>`, yang sah memuat tombol — dan lebih tepat
+                  secara semantik, karena ketukannya memang berpindah halaman.
+                */
+                accessibilityRole="link"
                 accessibilityLabel={[
                   item.nama,
                   item.anggota ? "Anda anggota di sini" : null,
@@ -335,7 +353,11 @@ export default function Peta() {
                 <View style={[styles.ikon, item.anggota && styles.ikonAnggota]}>
                   <Feather
                     name={
-                      item.anggota ? "check" : tab === "tps" ? "home" : "shopping-bag"
+                      item.anggota
+                        ? "check"
+                        : tab === "tps"
+                          ? "home"
+                          : "shopping-bag"
                     }
                     size={18}
                     color={item.anggota ? colors.white : colors.brand}
@@ -381,7 +403,11 @@ export default function Peta() {
                 >
                   <Feather name="navigation" size={17} color={colors.brand} />
                 </Pressable>
-                <Feather name="chevron-right" size={18} color={colors.subtext} />
+                <Feather
+                  name="chevron-right"
+                  size={18}
+                  color={colors.subtext}
+                />
               </Pressable>
             )}
             ListEmptyComponent={

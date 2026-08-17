@@ -26,8 +26,8 @@ export type RupaStatus = {
  * kontrak, dan warnanya ikut supaya web dan mobile menampilkan keadaan yang sama
  * dengan isyarat visual yang sama.
  *
- * Layar-layar di sini dulu menyimpan tabel status sendiri — tujuh status
- * laporan, empat status penarikan, tiga status iuran — dan setiap kali peladen
+ * Layar-layar di sini dulu menyimpan tabel status sendiri, tujuh status
+ * laporan, empat status penarikan, tiga status iuran, dan setiap kali peladen
  * menambah satu nilai, tabel lokalnya diam-diam ketinggalan dan menampilkan
  * nilai enum mentah kepada pengguna. Memakai `*_warna` menghapus seluruh kelas
  * bug itu.

@@ -2,13 +2,13 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -43,7 +43,10 @@ export default function LupaPassword() {
       // jadi tidak ada yang bisa dipastikan di sini selain melanjutkan.
       setLangkah("reset");
     } catch (e) {
-      galat.tangani(e, "Gagal mengirim kode. Periksa koneksi Anda lalu ulangi.");
+      galat.tangani(
+        e,
+        "Gagal mengirim kode. Periksa koneksi Anda lalu ulangi.",
+      );
     } finally {
       setLoading(false);
     }
@@ -94,7 +97,7 @@ export default function LupaPassword() {
           <Pressable
             style={styles.back}
             onPress={() =>
-              // Dari langkah kedua, kembali berarti membetulkan emailnya —
+              // Dari langkah kedua, kembali berarti membetulkan emailnya,
               // bukan meninggalkan layar dan kehilangan kode yang sudah dikirim.
               langkah === "reset" ? setLangkah("email") : router.back()
             }

@@ -12,7 +12,7 @@ export type HasilReorder = {
  * Keranjang dikosongkan lebih dulu supaya isinya persis pesanan yang diulang,
  * bukan campuran dengan apa pun yang tertinggal dari sesi belanja sebelumnya.
  * Pengosongannya satu permintaan (`DELETE /keranjang`), bukan menghapus baris
- * satu per satu — versi sebelumnya melakukan itu dan mengirim sebanyak jumlah
+ * satu per satu, versi sebelumnya melakukan itu dan mengirim sebanyak jumlah
  * item, masing-masing dengan kunci yang keliru pula.
  *
  * Kuantitas dikirim apa adanya. Stok dan harga terkini adalah urusan peladen;
@@ -36,7 +36,7 @@ export async function reorderItems(
       ditambah++;
     } catch {
       // Produk sudah tidak dijual, stoknya habis, atau tokonya nonaktif.
-      // Bukan alasan menghentikan sisa item — pengguna diberi tahu jumlahnya.
+      // Bukan alasan menghentikan sisa item, pengguna diberi tahu jumlahnya.
       dilewati++;
     }
   }

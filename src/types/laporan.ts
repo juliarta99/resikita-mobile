@@ -3,12 +3,12 @@
 import type { IsoDateTime, ParamsHalaman } from "./api";
 import type { PenggunaRingkas } from "./auth";
 import type {
-  AlasanRouting,
-  StatusLaporan,
-  StatusPenugasan,
-  StatusProgres,
-  SumberInput,
-  TipePenanggungJawab,
+    AlasanRouting,
+    StatusLaporan,
+    StatusPenugasan,
+    StatusProgres,
+    SumberInput,
+    TipePenanggungJawab,
 } from "./enums";
 import type { WilayahBertingkat } from "./wilayah";
 
@@ -28,7 +28,7 @@ export type FotoLaporan = {
 /**
  * Jejak audit routing. **Selalu hadir sebagai objek**, tapi isinya boleh `null`.
  *
- * Ditentukan peladen dengan urutan tetap — kabupaten terverifikasi → provinsi
+ * Ditentukan peladen dengan urutan tetap, kabupaten terverifikasi → provinsi
  * terverifikasi → desa terverifikasi → fasilitator wilayah. Klien tidak pernah
  * mengirimnya dan tidak boleh menghitung ulang urutannya.
  */
@@ -58,7 +58,7 @@ export type LaporanPenugasan = {
   catatan: string | null;
   ditugaskan_at: IsoDateTime | null;
   petugas?: PenggunaRingkas | null;
-  /** Relasi — dimuat pada daftar penugasan petugas (§19.1). */
+  /** Relasi, dimuat pada daftar penugasan petugas (§19.1). */
   laporan?: LaporanRingkas | null;
 };
 
@@ -113,12 +113,12 @@ export type Laporan = {
   penanggung_jawab: PenanggungJawab;
   is_duplikat: boolean;
   duplikat_of_id: number | null;
-  /** Bersyarat — hanya bila endpoint menghitungnya. */
+  /** Bersyarat, hanya bila endpoint menghitungnya. */
   jumlah_gabungan?: number;
   foto?: FotoLaporan[];
   progres?: LaporanProgres[];
   penugasan?: LaporanPenugasan[];
-  /** Bersyarat — hanya setelah `selesai_at` terisi. */
+  /** Bersyarat, hanya setelah `selesai_at` terisi. */
   waktu_respons_jam?: number | null;
   diverifikasi_at: IsoDateTime | null;
   selesai_at: IsoDateTime | null;
@@ -143,7 +143,7 @@ export type HasilCekDuplikat = {
 /**
  * Field `multipart/form-data` untuk `POST /laporan` (§9.5).
  *
- * Bukan tipe body JSON — ia mendokumentasikan nama field yang harus di-`append`
+ * Bukan tipe body JSON, ia mendokumentasikan nama field yang harus di-`append`
  * ke `FormData`, karena salah nama field di sini menghasilkan galat 422 yang
  * membingungkan. Foto ditangani terpisah oleh pemanggil.
  */

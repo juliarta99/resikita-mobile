@@ -3,12 +3,12 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -24,8 +24,11 @@ const SEMUA = "semua" as const;
 const BELUM = "belum" as const;
 type Saring = typeof SEMUA | typeof BELUM;
 
-const waktuRelatif = (iso: string) => {
+/** `created_at` boleh `null`; `new Date(null)` diam-diam berarti tahun 1970. */
+const waktuRelatif = (iso: string | null) => {
+  if (!iso) return "Waktu tidak tercatat";
   const selisih = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(selisih)) return "Waktu tidak tercatat";
   const menit = Math.floor(selisih / 60000);
   if (menit < 1) return "Baru saja";
   if (menit < 60) return `${menit} menit lalu`;
@@ -45,19 +48,24 @@ export default function DaftarNotifikasi() {
   const { baca, bacaSemua } = useAksiNotifikasi();
 
   /**
-   * Nilai penyaring `status` belum terdokumentasi (catatan T9).
+   * Penyaringnya `belum_dibaca`, sebuah boolean — bukan `status` berisi enum.
    *
-   * `"belum_dibaca"` adalah tebakan yang mengikuti gaya penamaan enum lain di
-   * kontrak ini. Kalau peladen tidak mengenalinya, kemungkinan besar ia
-   * mengabaikan parameter itu dan mengembalikan semuanya — tab "Belum Dibaca"
-   * jadi tampak sama dengan "Semua", bukan kosong atau galat.
+   * Versi sebelumnya menebak `status: "belum_dibaca"` dan menandainya sendiri
+   * sebagai tebakan. Kontraknya ternyata memang menyebutkannya: `belum_dibaca`
+   * bertipe bool. Nama parameter yang keliru tidak ditolak peladen, ia hanya
+   * diabaikan — tab "Belum Dibaca" tampil sama persis dengan "Semua", dan
+   * tidak ada satu pun galat yang menunjuk sebabnya.
+   *
+   * Dikirim hanya ketika bernilai `true`. Mengirim `false` untuk tab "Semua"
+   * juga benar, tapi menghilangkan parameternya membuat kedua tab punya URL
+   * yang berbeda secara jelas saat ditelusuri di log jaringan.
    */
   const q = useInfiniteQuery({
     queryKey: [...KUNCI_NOTIFIKASI, "daftar", saring],
     queryFn: ({ pageParam }) =>
       daftarNotifikasi({
         page: pageParam,
-        status: saring === BELUM ? "belum_dibaca" : undefined,
+        ...(saring === BELUM ? { belum_dibaca: true } : {}),
       }),
     initialPageParam: 1,
     getNextPageParam: (h) =>
@@ -73,9 +81,9 @@ export default function DaftarNotifikasi() {
     if (!n.dibaca) baca.mutate(n.id);
     // Tautan datang dari peladen, jadi bisa saja menunjuk rute yang tidak ada
     // di aplikasi versi ini. `router.push` pada rute tak dikenal cukup tidak
-    // melakukan apa-apa — lebih baik daripada melempar galat ke pengguna yang
+    // melakukan apa-apa, lebih baik daripada melempar galat ke pengguna yang
     // hanya menekan sebuah notifikasi.
-    if (n.tautan) router.push(n.tautan as Href);
+    if (n.action_url) router.push(n.action_url as Href);
   };
 
   return (
@@ -187,7 +195,7 @@ function Kartu({ n, onBuka }: { n: Notifikasi; onBuka: () => void }) {
       style={[styles.kartu, !n.dibaca && styles.kartuBaru]}
       onPress={onBuka}
       accessibilityRole="button"
-      accessibilityLabel={`${n.dibaca ? "" : "Belum dibaca. "}${n.judul}. ${n.isi}. ${waktuRelatif(n.created_at)}`}
+      accessibilityLabel={`${n.dibaca ? "" : "Belum dibaca. "}${n.judul}. ${n.pesan}. ${waktuRelatif(n.created_at)}`}
     >
       <View style={[styles.ikon, !n.dibaca && styles.ikonBaru]}>
         <Feather
@@ -204,13 +212,13 @@ function Kartu({ n, onBuka }: { n: Notifikasi; onBuka: () => void }) {
           {n.judul}
         </Text>
         <Text style={styles.isi} numberOfLines={3}>
-          {n.isi}
+          {n.pesan}
         </Text>
         <Text style={styles.waktu}>{waktuRelatif(n.created_at)}</Text>
       </View>
       {/*
         Titik penanda belum dibaca. Ia berdampingan dengan latar kartu yang
-        sedikit berbeda dan judul yang lebih tebal — tiga penanda sekaligus,
+        sedikit berbeda dan judul yang lebih tebal, tiga penanda sekaligus,
         karena warna saja tidak cukup bagi pengguna yang buta warna.
       */}
       {!n.dibaca && <View style={styles.titik} />}
@@ -267,7 +275,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   ikonBaru: { backgroundColor: "#DCF3EA" },
-  judul: { fontSize: 14, fontWeight: "600", color: colors.text, lineHeight: 20 },
+  judul: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.text,
+    lineHeight: 20,
+  },
   judulBaru: { fontWeight: "800" },
   isi: {
     fontSize: 13,

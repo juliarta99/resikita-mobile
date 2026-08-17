@@ -3,15 +3,15 @@ import { useMutation } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -48,7 +48,7 @@ export default function HapusAkun() {
     mutationFn: () => hapusAkun(password),
     onSuccess: async () => {
       // Sesi lokal tetap dibersihkan lewat `keluar()` supaya token, cache
-      // Query, dan token push ikut dicabut — peladen menghapus akunnya, tapi
+      // Query, dan token push ikut dicabut, peladen menghapus akunnya, tapi
       // sisa keadaan di perangkat ini urusan kita.
       await keluar();
       notify(

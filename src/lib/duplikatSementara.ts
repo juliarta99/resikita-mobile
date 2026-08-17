@@ -5,7 +5,7 @@ import type { LaporanRingkas } from "@/types/laporan";
  *
  * Memakai penampung tingkat modul, bukan params router, karena alasan yang sama
  * dengan `fotoSementara`: params expo-router adalah string URL, dan mengirim
- * larik objek lewat sana berarti merangkai lalu mengurai JSON di dua tempat —
+ * larik objek lewat sana berarti merangkai lalu mengurai JSON di dua tempat,
  * satu lagi kesempatan untuk rusak diam-diam, demi data yang toh hanya perlu
  * hidup beberapa detik di dalam satu proses.
  */

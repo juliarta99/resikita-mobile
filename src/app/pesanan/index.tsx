@@ -3,13 +3,13 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -22,6 +22,7 @@ import { formatRupiah } from "@/lib/rupiah";
 import { metaStatusPesanan } from "@/lib/statusPesanan";
 import type { StatusPesanan } from "@/types/enums";
 import type { Pesanan } from "@/types/pesanan";
+import { urlMedia } from "@/lib/media";
 
 const TAB: { kunci: string; label: string; status?: StatusPesanan }[] = [
   { kunci: "semua", label: "Semua" },
@@ -133,7 +134,7 @@ export default function DaftarPesanan() {
 
 function KartuPesanan({ p }: { p: Pesanan }) {
   const s = metaStatusPesanan(p.status);
-  // Kuncinya `item`, bukan `items` — salah satu huruf di sini membuat seluruh
+  // Kuncinya `item`, bukan `items`, salah satu huruf di sini membuat seluruh
   // kartu kosong karena `pertama` selalu `undefined`.
   const item = p.item ?? [];
   const pertama = item[0];
@@ -158,7 +159,7 @@ function KartuPesanan({ p }: { p: Pesanan }) {
           <View style={styles.gambar}>
             {pertama.produk?.foto_utama_url ? (
               <Image
-                source={{ uri: pertama.produk.foto_utama_url }}
+                source={{ uri: urlMedia(pertama.produk.foto_utama_url) }}
                 style={styles.gambarIsi}
                 accessibilityIgnoresInvertColors
               />

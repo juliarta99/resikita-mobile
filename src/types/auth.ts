@@ -22,7 +22,7 @@ export type User = {
   tanggal_lahir: IsoDate | null;
   jenis_kelamin: JenisKelamin | null;
   /**
-   * ULID 26 karakter. Inilah yang dirender jadi QR nasabah di `dompet/qr` —
+   * ULID 26 karakter. Inilah yang dirender jadi QR nasabah di `dompet/qr`,
    * bukan NIK, bukan id, bukan nomor telepon. `null` sampai `GET /dompet/saldo`
    * membuatkannya.
    */
@@ -38,7 +38,7 @@ export type User = {
    * bukan dari daftar role yang ditulis ulang di klien (§2.7).
    */
   permissions: string[];
-  /** Domisili. Relasi — hadir pada daftar, login, `/auth/me`, dan `PUT /profil`. */
+  /** Domisili. Relasi, hadir pada daftar, login, `/auth/me`, dan `PUT /profil`. */
   wilayah?: Wilayah | null;
   bank_sampah_id: number | null;
   umkm_id: number | null;
@@ -80,7 +80,7 @@ export type PayloadMasuk = {
    * Nama perangkat, ikut tercatat pada token Sanctum.
    *
    * Namanya `nama_perangkat`, bukan `device_name`. Nama yang salah tidak
-   * menghasilkan galat — peladen hanya mengabaikannya, dan seluruh sesi tampil
+   * menghasilkan galat, peladen hanya mengabaikannya, dan seluruh sesi tampil
    * sebagai "mobile" tanpa ada yang tahu kenapa.
    */
   nama_perangkat?: string;
@@ -97,7 +97,7 @@ export type PayloadResetPassword = {
   password_confirmation: string;
 };
 
-/** Body `PUT /profil` (§4.8). Seluruh field opsional — kirim yang berubah saja. */
+/** Body `PUT /profil` (§4.8). Seluruh field opsional, kirim yang berubah saja. */
 export type PayloadUbahProfil = {
   name?: string;
   email?: string;

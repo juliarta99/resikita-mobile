@@ -17,7 +17,7 @@ function pisahRibuan(bilangan: number): string {
 /**
  * Format nilai uang jadi teks rupiah.
  *
- * Masukannya **integer rupiah** — `12500` berarti Rp 12.500. Jangan pernah
+ * Masukannya **integer rupiah**, `12500` berarti Rp 12.500. Jangan pernah
  * membaginya dengan 100 atau mem-parsing-nya sebagai float sebelum masuk ke
  * sini.
  *
@@ -32,10 +32,10 @@ export function formatRupiah(nilai: Rupiah): string {
 
   if (__DEV__ && !Number.isInteger(nilai)) {
     // Bukan sekadar cerewet: nilai pecahan di sini berarti ada tempat yang
-    // memperlakukan uang sebagai float — kemungkinan besar sisa pembagian 100
+    // memperlakukan uang sebagai float, kemungkinan besar sisa pembagian 100
     // dari skema lama. Membulatkannya diam-diam akan menyembunyikan sumbernya.
     console.warn(
-      `formatRupiah menerima nilai pecahan (${nilai}). API mengembalikan integer rupiah — telusuri asal nilai ini.`,
+      `formatRupiah menerima nilai pecahan (${nilai}). API mengembalikan integer rupiah, telusuri asal nilai ini.`,
     );
   }
 
@@ -48,7 +48,7 @@ export function formatRupiah(nilai: Rupiah): string {
  * Sama seperti `formatRupiah`, tapi untuk nilai yang boleh kosong.
  *
  * Dipakai pada field seperti `estimasi_nilai` yang bernilai `null` untuk
- * kategori tanpa nilai ekonomi. Menampilkan "Rp 0" di sana keliru — nol berarti
+ * kategori tanpa nilai ekonomi. Menampilkan "Rp 0" di sana keliru, nol berarti
  * tidak bernilai, sementara `null` berarti tidak diketahui.
  */
 export function formatRupiahOpsional(

@@ -1,12 +1,12 @@
 import axios, {
-  AxiosError,
-  type AxiosRequestConfig,
-  type AxiosResponse,
+    AxiosError,
+    type AxiosRequestConfig,
+    type AxiosResponse,
 } from "axios";
 import { router } from "expo-router";
 import { Platform } from "react-native";
 
-import { queryClient } from "@/lib/queryClient";
+import { bersihkanSesi } from "@/lib/queryClient";
 import type { ApiErrorBody, PaginationMeta } from "@/types/api";
 import { ApiError } from "./error";
 import { tokenStore } from "./token";
@@ -15,7 +15,7 @@ import { tokenStore } from "./token";
 const TIMEOUT_STANDAR = 15_000;
 
 /**
- * Klasifikasi dan chatbot bersifat sinkron — permintaan memegang satu proses
+ * Klasifikasi dan chatbot bersifat sinkron, permintaan memegang satu proses
  * peladen selama beberapa detik sementara model bekerja. Dokumen meminta
  * minimal 30 detik; angka di sini lebih longgar karena klasifikasi masih harus
  * mengunggah foto lebih dulu, dan unggahan di jaringan seluler yang lemah
@@ -27,7 +27,7 @@ export const TIMEOUT_AI = 45_000;
  * Endpoint yang 401-nya berarti "kredensial salah", bukan "sesi habis".
  *
  * Tanpa daftar ini, gagal masuk karena salah kata sandi akan memicu
- * pembersihan token dan pengalihan ke layar masuk — dari layar masuk. Pengguna
+ * pembersihan token dan pengalihan ke layar masuk, dari layar masuk. Pengguna
  * melihat layarnya berkedip dan tidak pernah membaca pesan galatnya.
  */
 const JALUR_TANPA_SESI = [
@@ -50,7 +50,7 @@ api.interceptors.request.use(async (config) => {
 });
 
 /**
- * Buka amplop respons — **sekali, di sini saja**.
+ * Buka amplop respons, **sekali, di sini saja**.
  *
  * Seluruh endpoint membungkus muatannya dalam `{ success, message, data }`.
  * Kalau setiap pemanggil membukanya sendiri dengan `.data.data`, satu kesalahan
@@ -89,8 +89,13 @@ api.interceptors.response.use(undefined, async (galat: unknown) => {
     // Urutannya penting: buang token lebih dulu supaya permintaan yang masih
     // mengantre tidak ikut mengirim token mati, baru kosongkan cache supaya
     // data pengguna sebelumnya tidak sempat terpampang di layar masuk.
+    //
+    // Pembersihannya lewat `bersihkanSesi()`, bukan `queryClient.clear()`.
+    // `clear()` memutus observer `useQuery` dari objek Query yang diamatinya,
+    // sehingga profil pengguna lama justru **bertahan** di layar alih-alih
+    // hilang. Lihat catatan lengkapnya di `context/AuthContext.tsx`.
     await tokenStore.clear();
-    queryClient.clear();
+    bersihkanSesi();
     router.replace("/(auth)/login");
   }
 
@@ -149,7 +154,7 @@ export const del = <T>(url: string, config?: AxiosRequestConfig) =>
  * Di web, `Content-Type` **harus** dibiarkan kosong supaya browser menyusun
  * sendiri boundary multipart-nya. Memaksanya ke `multipart/form-data`
  * menghasilkan badan permintaan tanpa boundary, dan peladen membacanya sebagai
- * unggahan kosong — galat yang tampak seperti "foto tidak terkirim" padahal
+ * unggahan kosong, galat yang tampak seperti "foto tidak terkirim" padahal
  * fotonya baik-baik saja.
  */
 export const postMultipart = <T>(
@@ -168,7 +173,7 @@ export const postMultipart = <T>(
 /**
  * Pastikan sebuah muatan benar-benar larik.
  *
- * Beberapa endpoint yang dokumennya menjanjikan larik ternyata membungkusnya —
+ * Beberapa endpoint yang dokumennya menjanjikan larik ternyata membungkusnya,
  * entah sebagai amplop berhalaman (`{ data, meta }`) atau di bawah kunci lain.
  * Tanpa penjaga ini, `.map()` atau `.reduce()` di layar meledak dengan
  * "items.reduce is not a function", dan jejaknya menunjuk komponen, bukan
@@ -186,8 +191,8 @@ export function pastikanLarik<T>(muatan: unknown, asal: string): T[] {
     const objek = muatan as Record<string, unknown>;
 
     // Kunci yang paling lazim didahulukan; setelah itu kunci larik apa pun.
-    // Peladen ini ternyata memakai nama domain — `toko` untuk keranjang,
-    // `titik` untuk peta — jadi daftar tetap saja tidak cukup.
+    // Peladen ini ternyata memakai nama domain, `toko` untuk keranjang,
+    // `titik` untuk peta, jadi daftar tetap saja tidak cukup.
     const kunci =
       ["data", "items", "item"].find((k) => Array.isArray(objek[k])) ??
       Object.keys(objek).find((k) => Array.isArray(objek[k]));
@@ -221,7 +226,7 @@ export function pastikanLarik<T>(muatan: unknown, asal: string): T[] {
  * berhingga di aplikasi ini ikut mati**.
  *
  * Ketika `meta` tidak ada, halaman yang dikembalikan ditandai sebagai satu-
- * satunya halaman — daftarnya tetap tampil, hanya tidak bisa memuat lanjutan.
+ * satunya halaman, daftarnya tetap tampil, hanya tidak bisa memuat lanjutan.
  * Kehilangan paginasi jauh lebih ringan daripada layar yang mogok.
  */
 export function pastikanHalaman<T>(

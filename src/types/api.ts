@@ -4,7 +4,7 @@
  */
 
 /**
- * Nilai uang. **Selalu integer rupiah** — `12500` berarti Rp 12.500.
+ * Nilai uang. **Selalu integer rupiah**, `12500` berarti Rp 12.500.
  *
  * Alias ini tidak menambah keamanan tipe (TypeScript tidak membedakannya dari
  * `number`), tapi ia menjawab pertanyaan yang selalu muncul saat membaca sebuah
@@ -55,7 +55,7 @@ export type ApiErrorBody = {
 /**
  * Hasil endpoint berhalaman setelah amplopnya dibuka interceptor.
  *
- * Interceptor membuang `success` tapi **tidak boleh** membuang `meta` — tanpa
+ * Interceptor membuang `success` tapi **tidak boleh** membuang `meta`, tanpa
  * `last_page`, `useInfiniteQuery` tidak punya cara tahu kapan berhenti memuat.
  */
 export type Halaman<T> = {
@@ -68,7 +68,7 @@ export type Halaman<T> = {
  *
  * Hanya dua kunci, dan itu disengaja: peladen mengabaikan diam-diam query yang
  * tidak dikenalinya, jadi `sort`/`order`/`q` yang dulu ada di sini tidak pernah
- * menghasilkan galat — ia hanya tidak berpengaruh apa-apa, dan itu jauh lebih
+ * menghasilkan galat, ia hanya tidak berpengaruh apa-apa, dan itu jauh lebih
  * sulit dilacak. Penyaring lain didefinisikan per endpoint.
  */
 export type ParamsHalaman = {

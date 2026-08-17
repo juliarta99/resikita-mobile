@@ -1,15 +1,15 @@
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { type Href, router } from "expo-router";
 import { useState } from "react";
 import {
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -27,7 +27,7 @@ const PANJANG_SANDI_MINIMUM = 8;
  *
  * Peladen melaporkan ketidakcocokan konfirmasi pada field `password`, sementara
  * yang salah ketik hampir selalu barisnya konfirmasi. Tanpa pemetaan ini pesan
- * "Konfirmasi kata sandi tidak cocok" menempel di baris kata sandi — persis
+ * "Konfirmasi kata sandi tidak cocok" menempel di baris kata sandi, persis
  * baris yang sebenarnya sudah benar.
  */
 const PETA_FIELD = { password_confirmation: "konfirmasi" };
@@ -67,7 +67,7 @@ export default function Register() {
         password,
         password_confirmation: konfirmasi,
         // Keduanya opsional di kontrak. Mengirim string kosong berbeda dari
-        // tidak mengirim sama sekali — peladen akan memvalidasi nilai kosong
+        // tidak mengirim sama sekali, peladen akan memvalidasi nilai kosong
         // itu dan menolaknya.
         ...(phone.trim() ? { phone: phone.trim() } : {}),
         ...(wilayah.wilayahId ? { wilayah_id: wilayah.wilayahId } : {}),
@@ -96,12 +96,17 @@ export default function Register() {
           contentContainerStyle={{ paddingBottom: 30 }}
           keyboardShouldPersistTaps="handled"
         >
+          {/*
+            Ke beranda, bukan `router.back()`. Layar masuk mengarah ke sini
+            dengan `replace`, jadi riwayatnya sudah tergantikan dan `back()`
+            tidak punya tujuan.
+          */}
           <Pressable
             style={styles.back}
-            onPress={() => router.back()}
+            onPress={() => router.replace("/beranda" as Href)}
             hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel="Kembali"
+            accessibilityLabel="Kembali ke beranda"
           >
             <Feather name="arrow-left" size={24} color={colors.white} />
           </Pressable>

@@ -40,7 +40,7 @@ export type Artikel = Omit<ArtikelRingkas, "cuplikan" | "kategori"> & {
   /**
    * Markdown penuh, menggantikan `cuplikan`.
    *
-   * **Jangan lempar ini ke TTS** — pembaca akan mengucapkan pagar dan
+   * **Jangan lempar ini ke TTS**, pembaca akan mengucapkan pagar dan
    * bintangnya. Untuk dibacakan, ambil `TeksBaca` dari endpoint terpisah.
    */
   konten: string;
@@ -56,7 +56,7 @@ export type Artikel = Omit<ArtikelRingkas, "cuplikan" | "kategori"> & {
  *
  * Sengaja tidak ikut pada detail artikel: isinya bisa sepanjang seluruh artikel
  * dan hanya dibutuhkan ketika pemutar benar-benar dinyalakan. Memanggilnya
- * sekaligus menaikkan penghitung `didengarkan` — tidak ada endpoint terpisah
+ * sekaligus menaikkan penghitung `didengarkan`, tidak ada endpoint terpisah
  * untuk melaporkan pemakaian fitur suara.
  */
 export type TeksBaca = {

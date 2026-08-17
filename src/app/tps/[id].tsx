@@ -2,12 +2,12 @@ import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Href, router, useLocalSearchParams } from "expo-router";
 import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -78,7 +78,7 @@ export default function DetailTps() {
    * Versi sebelumnya hanya menyimpan `baruBergabung` di state layar ini,
    * dengan catatan bahwa kontrak tidak punya endpoint "TPS saya". Catatan itu
    * sudah tidak benar: `GET /tps/keanggotaan-saya` (§13.1) ada dan
-   * mengembalikan TPS beserta tagihannya. Akibat dari asumsi lama itu nyata —
+   * mengembalikan TPS beserta tagihannya. Akibat dari asumsi lama itu nyata,
    * setelah aplikasi ditutup, layar ini kembali menawarkan "Daftar Jadi
    * Anggota" kepada orang yang sudah terdaftar, dan peladenlah yang harus
    * menolaknya.
@@ -104,7 +104,10 @@ export default function DetailTps() {
         `Anda kini anggota ${namaTps}. Tagihan iuran, bila ada, muncul di menu Tagihan Iuran.`,
       ),
     onError: (e: unknown) =>
-      notify("Gagal mendaftar", pesanGalat(e, "Tidak dapat mendaftar. Coba lagi.")),
+      notify(
+        "Gagal mendaftar",
+        pesanGalat(e, "Tidak dapat mendaftar. Coba lagi."),
+      ),
   });
 
   const keluar = useMutation({
@@ -129,7 +132,7 @@ export default function DetailTps() {
    *
    * Peladen menolak pendaftaran selama pengguna masih terdaftar di TPS lain
    * (§13.2, `422`), jadi dua langkah ini memang harus berurutan. Yang
-   * diputuskan di sini hanya urutannya — syarat kelayakannya, termasuk
+   * diputuskan di sini hanya urutannya, syarat kelayakannya, termasuk
    * tunggakan iuran yang menahan langkah `keluar`, tetap milik peladen.
    */
   const pindah = useMutation({
@@ -155,7 +158,10 @@ export default function DetailTps() {
       await segarkanKeanggotaanTps(qc);
 
       if (!(e instanceof GagalPindah)) {
-        notify("Gagal pindah", pesanGalat(e, "Perpindahan tidak dapat diproses."));
+        notify(
+          "Gagal pindah",
+          pesanGalat(e, "Perpindahan tidak dapat diproses."),
+        );
         return;
       }
 
@@ -314,7 +320,7 @@ export default function DetailTps() {
             </Text>
           </View>
 
-          {/* Penjelasan siap tampil dari peladen — jangan dirangkai sendiri,
+          {/* Penjelasan siap tampil dari peladen, jangan dirangkai sendiri,
               sebutannya harus sama dengan yang dibaca warga di web. */}
           {!!tps.jenis_deskripsi && (
             <View style={styles.baris}>

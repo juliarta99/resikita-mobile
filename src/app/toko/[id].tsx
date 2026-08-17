@@ -2,13 +2,13 @@ import { Feather } from "@expo/vector-icons";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { type Href, router, useLocalSearchParams } from "expo-router";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -19,6 +19,7 @@ import { colors, radius, spacing } from "@/constants/theme";
 import { daftarProduk, detailUmkm } from "@/lib/api/produk";
 import { formatRupiah } from "@/lib/rupiah";
 import type { Produk } from "@/types/produk";
+import { urlMedia } from "@/lib/media";
 
 export default function DetailToko() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -89,7 +90,9 @@ export default function DetailToko() {
         keyExtractor={(p) => p.slug}
         numColumns={2}
         columnWrapperStyle={
-          produk.length > 0 ? { gap: 12, paddingHorizontal: spacing.md } : undefined
+          produk.length > 0
+            ? { gap: 12, paddingHorizontal: spacing.md }
+            : undefined
         }
         contentContainerStyle={{ paddingBottom: 30, gap: 12 }}
         ListHeaderComponent={
@@ -97,7 +100,7 @@ export default function DetailToko() {
             <View style={styles.logo}>
               {t.foto_url ? (
                 <Image
-                  source={{ uri: t.foto_url }}
+                  source={{ uri: urlMedia(t.foto_url) }}
                   style={styles.logoIsi}
                   accessibilityIgnoresInvertColors
                 />
@@ -128,7 +131,7 @@ export default function DetailToko() {
               <View style={styles.metaBaris}>
                 {/*
                   Jumlah produk diambil dari agregat peladen, bukan dari panjang
-                  halaman yang kebetulan sudah termuat — daftar ini bergulir tak
+                  halaman yang kebetulan sudah termuat, daftar ini bergulir tak
                   berhingga, jadi angkanya dulu bertambah sendiri saat pengguna
                   menggulir.
                 */}
@@ -204,7 +207,7 @@ function KartuProduk({ p }: { p: Produk }) {
       <View style={styles.gambar}>
         {p.foto_utama_url ? (
           <Image
-            source={{ uri: p.foto_utama_url }}
+            source={{ uri: urlMedia(p.foto_utama_url) }}
             style={styles.gambarIsi}
             accessibilityIgnoresInvertColors
           />

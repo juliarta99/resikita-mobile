@@ -4,17 +4,17 @@ import React, { createContext, useContext, useEffect } from "react";
 import { Platform } from "react-native";
 
 import {
-  daftar as apiDaftar,
-  keluar as apiKeluar,
-  masuk as apiMasuk,
-  profilSaya,
+    daftar as apiDaftar,
+    keluar as apiKeluar,
+    masuk as apiMasuk,
+    profilSaya,
 } from "@/lib/api/auth";
 import { tokenStore } from "@/lib/api/token";
 import { cabutPush, daftarkanPush } from "@/lib/push";
-import { queryClient } from "@/lib/queryClient";
+import { bersihkanSesi, KUNCI_PROFIL, queryClient } from "@/lib/queryClient";
 import type { HasilAuth, PayloadDaftar, User } from "@/types/auth";
 
-export const KUNCI_PROFIL = ["auth", "me"] as const;
+export { KUNCI_PROFIL };
 
 type AuthCtx = {
   user: User | null;
@@ -28,7 +28,7 @@ type AuthCtx = {
   /**
    * `true` bila role utama pengguna sama dengan yang ditanyakan.
    *
-   * Peladen mengirim **satu** `role`, bukan larik — versi sebelumnya membaca
+   * Peladen mengirim **satu** `role`, bukan larik, versi sebelumnya membaca
    * `user.roles` yang tidak pernah ada, sehingga area petugas tidak pernah
    * muncul untuk siapa pun.
    */
@@ -60,7 +60,7 @@ export function useAuth(): AuthCtx {
  *
  * Berguna saat pengguna ingin mengenali sesi miliknya di daftar perangkat.
  * `Device.deviceName` kosong di web dan pada sebagian emulator, jadi selalu ada
- * cadangan — tanpa itu peladen memakai label seragam `mobile` untuk semua sesi.
+ * cadangan, tanpa itu peladen memakai label seragam `mobile` untuk semua sesi.
  */
 function namaPerangkat(): string {
   return Device.deviceName?.trim() || `Resikita ${Platform.OS}`;
@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    *
    * Dua alasan. Pertama, aturan emas nomor 1: seluruh state peladen lewat
    * Query. Kedua, dan lebih praktis: penanganan 401 di `lib/api/client.ts`
-   * memanggil `queryClient.clear()`. Selama profil disimpan di state React, ia
+   * memanggil `bersihkanSesi()`. Selama profil disimpan di state React, ia
    * selamat dari pembersihan itu, dan nama pengguna sebelumnya masih terpampang
    * setelah sesinya dicabut.
    */
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Daftarkan ulang perangkat pada setiap pembukaan aplikasi oleh pengguna
    * yang sesinya masih tersimpan.
    *
-   * Token push bisa berubah — sistem operasi memutarnya saat aplikasi dipasang
+   * Token push bisa berubah, sistem operasi memutarnya saat aplikasi dipasang
    * ulang, data dibersihkan, atau setelah jeda panjang. Mendaftarkannya hanya
    * saat proses masuk berarti pengguna yang tidak pernah keluar lama-lama
    * berhenti menerima notifikasi tanpa pernah tahu sebabnya. Pemanggilan ini
@@ -107,7 +107,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const simpanSesi = async (hasil: HasilAuth) => {
     await tokenStore.set(hasil.token);
+
+    /**
+     * Urutan kedua baris ini menentukan apakah layar berubah atau tidak.
+     *
+     * **Profil dipasang lebih dulu**, supaya `useQuery` di atas langsung
+     * menerimanya dan seluruh layar berpindah dari tampilan tamu seketika.
+     *
+     * **Baru sesudahnya seluruh cache ditandai basi.** Puluhan query lain —
+     * beranda, statistik, keranjang, notifikasi — sudah terisi jawaban versi
+     * tamu saat pengguna menjelajah sebelum masuk. Jawaban itu masih segar
+     * menurut `staleTime`, jadi tanpa penandaan ini tidak ada satu pun yang
+     * punya alasan memuat ulang, dan layar menyusun dirinya dari data yang
+     * tidak mengenal pengguna mana pun.
+     *
+     * **Jangan menggantinya dengan `queryClient.clear()`.** Itu pernah dicoba
+     * dan justru membuat gejalanya lebih parah: `clear()` memusnahkan objek
+     * Query yang sedang diamati `useQuery`, lalu `setQueryData` membangun objek
+     * baru yang tidak diamati siapa pun. Cache berisi profil yang benar,
+     * observer-nya tidak pernah diberi tahu, dan pengguna tetap melihat
+     * antarmuka tamu sampai halaman dimuat ulang — karena memuat ulang halaman
+     * memasang observer baru pada objek yang baru itu.
+     *
+     * `invalidateQueries()` mencapai tujuan yang sama tanpa memutus satu pun
+     * observer: ia menandai semuanya basi dan memuat ulang yang sedang aktif.
+     */
     queryClient.setQueryData<User>(KUNCI_PROFIL, hasil.user);
+    await queryClient.invalidateQueries();
     // Dijalankan tanpa ditunggu: pendaftaran push melibatkan dialog izin dan
     // panggilan jaringan, dan menahan proses masuk sampai keduanya selesai
     // membuat aplikasi terasa menggantung setelah pengguna menekan "Masuk".
@@ -136,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     },
 
     keluar: async () => {
-      // Perangkat dicabut lebih dulu, selagi token Sanctum masih berlaku —
+      // Perangkat dicabut lebih dulu, selagi token Sanctum masih berlaku,
       // setelah `apiKeluar()` permintaan apa pun akan ditolak 401.
       await cabutPush();
       try {
@@ -146,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // sisi perangkat, jadi kegagalan ini tidak boleh menghentikan apa pun.
       }
       await tokenStore.clear();
-      queryClient.clear();
+      bersihkanSesi();
     },
 
     refresh: async () => {

@@ -8,13 +8,15 @@
  *
  * **Ini penerjemah subset, bukan parser markdown lengkap.** Ia menangani apa
  * yang benar-benar dipakai artikel edukasi: judul, tebal, miring, daftar,
- * kutipan, tautan, gambar, dan paragraf. Sintaks di luar itu — tabel, blok
- * kode berpagar, footnote — dibiarkan apa adanya.
+ * kutipan, tautan, gambar, dan paragraf. Sintaks di luar itu, tabel, blok
+ * kode berpagar, footnote, dibiarkan apa adanya.
  *
  * Alternatif yang lebih baik ada dua, keduanya di luar kendali klien:
  * peladen mengirim HTML seperti yang sudah dilakukannya untuk `teks_baca`,
  * atau proyek ini menambah dependensi parser markdown. Lihat catatan T17.
  */
+
+import { urlMedia } from "@/lib/media";
 
 /** Lolos karakter HTML supaya isi artikel tidak bisa menyuntikkan markup. */
 function lolos(teks: string): string {
@@ -28,15 +30,18 @@ function lolos(teks: string): string {
 function baris(teks: string): string {
   return (
     lolos(teks)
-      // Gambar harus lebih dulu dari tautan — sintaksnya hanya beda tanda seru.
+      // Gambar harus lebih dulu dari tautan, sintaksnya hanya beda tanda seru.
+      //
+      // Alamatnya dilewatkan `urlMedia` karena penulis artikel menyisipkan
+      // jalur relatif seperti `/storage/artikel/1.jpg`. Di dalam WebView, jalur
+      // relatif diselesaikan terhadap dokumen yang disuntikkan — bukan terhadap
+      // peladen — sehingga gambarnya tidak pernah termuat.
       .replace(
         /!\[([^\]]*)\]\(([^)\s]+)\)/g,
-        '<img src="$2" alt="$1" />',
+        (_cocok, alt: string, sumber: string) =>
+          `<img src="${urlMedia(sumber) ?? sumber}" alt="${alt}" />`,
       )
-      .replace(
-        /\[([^\]]+)\]\(([^)\s]+)\)/g,
-        '<a href="$2">$1</a>',
-      )
+      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>')
       .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
       .replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>")
       .replace(/`([^`]+)`/g, "<code>$1</code>")

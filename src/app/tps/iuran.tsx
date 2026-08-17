@@ -3,12 +3,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -17,8 +17,8 @@ import ErrorState from "@/components/states/ErrorState";
 import LoadingState from "@/components/states/LoadingState";
 import { colors, radius, spacing } from "@/constants/theme";
 import { useKeanggotaanTps } from "@/hooks/useKeanggotaanTps";
-import { bayarIuran } from "@/lib/api/fasilitas";
 import { ApiError } from "@/lib/api/error";
+import { bayarIuran } from "@/lib/api/fasilitas";
 import { confirmDialog, notify } from "@/lib/dialog";
 import { formatRupiah } from "@/lib/rupiah";
 import type { TpsIuran } from "@/types/fasilitas";
@@ -26,7 +26,7 @@ import type { TpsIuran } from "@/types/fasilitas";
 /**
  * Warna lencana status, mengikuti `status_warna` dari peladen.
  *
- * Namanya yang menentukan, bukan tebakan klien atas nilai `status` — dengan
+ * Namanya yang menentukan, bukan tebakan klien atas nilai `status`, dengan
  * begitu web dan mobile menandai tagihan yang sama dengan warna yang sama.
  * Nilai di luar daftar jatuh ke abu-abu netral, bukan menghilang.
  */
@@ -43,7 +43,10 @@ const warnaStatus = (nama: string) => WARNA_STATUS[nama] ?? WARNA_STATUS.gray;
 function labelPeriode(periode: string): string {
   const tanggal = new Date(`${periode}-01T00:00:00`);
   if (Number.isNaN(tanggal.getTime())) return periode;
-  return tanggal.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+  return tanggal.toLocaleDateString("id-ID", {
+    month: "long",
+    year: "numeric",
+  });
 }
 
 export default function TagihanIuran() {
@@ -54,7 +57,7 @@ export default function TagihanIuran() {
    * Tagihan datang bersama keanggotaan, bukan dari endpoint sendiri.
    *
    * `GET /tps/keanggotaan-saya` (§13.1) mengembalikan TPS beserta **12 periode
-   * terakhir** sekaligus. Tidak ada `GET /tps/iuran` berhalaman — versi
+   * terakhir** sekaligus. Tidak ada `GET /tps/iuran` berhalaman, versi
    * sebelumnya memanggil endpoint yang tidak pernah ada, jadi layar ini tidak
    * bisa dibuka sama sekali.
    */
@@ -67,7 +70,7 @@ export default function TagihanIuran() {
     onSuccess: async () => {
       setSedangBayar(null);
       // Saldo ikut berubah: pembayaran iuran **selalu** memotong saldo
-      // Resikita (§13.4) — tidak ada jalur Midtrans untuk tagihan ini.
+      // Resikita (§13.4), tidak ada jalur Midtrans untuk tagihan ini.
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["tps"] }),
         qc.invalidateQueries({ queryKey: ["dompet"] }),
@@ -128,7 +131,7 @@ export default function TagihanIuran() {
     );
   }
 
-  // `data: null` berarti belum jadi anggota — keadaan normal, bukan galat.
+  // `data: null` berarti belum jadi anggota, keadaan normal, bukan galat.
   if (!keanggotaan) {
     return (
       <SafeAreaView style={styles.screen} edges={["top"]}>
@@ -228,7 +231,7 @@ function KartuIuran({
           <Text style={styles.periode}>{labelPeriode(it.periode)}</Text>
           <Text style={styles.jumlah}>{formatRupiah(it.jumlah)}</Text>
         </View>
-        {/* Label statusnya dari peladen, bukan dirangkai di sini — kata yang
+        {/* Label statusnya dari peladen, bukan dirangkai di sini, kata yang
             dibaca warga harus sama persis dengan yang di web. */}
         <View style={[styles.status, { backgroundColor: warna.bg }]}>
           <Text style={[styles.statusTeks, { color: warna.fg }]}>

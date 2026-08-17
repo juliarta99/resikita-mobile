@@ -3,14 +3,14 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -25,20 +25,30 @@ import { metaKategori } from "@/lib/kategoriSampah";
 import { formatRupiahOpsional } from "@/lib/rupiah";
 import { KATEGORI_SAMPAH, type KategoriSampah } from "@/types/enums";
 import type { HasilKlasifikasi } from "@/types/klasifikasi";
+import { urlMedia } from "@/lib/media";
 
 /**
  * Chip penyaring dibangkitkan dari enum, bukan ditulis ulang.
  *
  * Daftar yang ditulis tangan di sini sebelumnya hanya memuat tiga dari lima
- * kategori — `residu` dan `elektronik` tidak pernah bisa disaring sama sekali.
+ * kategori, `residu` dan `elektronik` tidak pernah bisa disaring sama sekali.
  * Menurunkannya dari `KATEGORI_SAMPAH` membuat kategori baru mustahil terlupa.
  */
 const SEMUA = "semua" as const;
 type Chip = typeof SEMUA | KategoriSampah;
 const CHIPS: Chip[] = [SEMUA, ...KATEGORI_SAMPAH];
 
-function labelHari(iso: string) {
+/**
+ * Pembatas tanggal untuk daftar.
+ *
+ * `created_at` boleh `null` menurut kontrak API. Tanpa penjagaan ini
+ * `new Date(null)` menghasilkan 1 Januari 1970, dan satu baris tanpa timestamp
+ * menyisipkan judul "1 Januari 1970" di tengah riwayat hari ini.
+ */
+function labelHari(iso: string | null) {
+  if (!iso) return "Tanpa tanggal";
   const ts = new Date(iso).getTime();
+  if (Number.isNaN(ts)) return "Tanpa tanggal";
   const now = new Date();
   const awalHariIni = new Date(
     now.getFullYear(),
@@ -54,11 +64,13 @@ function labelHari(iso: string) {
   });
 }
 
-const jam = (iso: string) =>
-  new Date(iso).toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+const jam = (iso: string | null) => {
+  if (!iso) return "--:--";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? "--:--"
+    : d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+};
 
 type Baris =
   | { type: "header"; label: string }
@@ -69,13 +81,22 @@ export default function RiwayatKlasifikasi() {
   const [cari, setCari] = useState("");
   const cariTertunda = useDebounce(cari);
 
+  /**
+   * Penyaring kategori dikerjakan peladen, pencarian teks tidak.
+   *
+   * `GET /klasifikasi/riwayat` hanya menerima `kategori`, `page`, dan
+   * `per_page`. Versi sebelumnya ikut mengirim `q`, dan peladen mengabaikannya
+   * diam-diam — kotak pencarian terlihat bekerja padahal daftarnya tidak pernah
+   * menyempit sedikit pun. Karena itu kata kuncinya sengaja **tidak** ikut ke
+   * kunci query: mengetik tidak memicu permintaan baru, penyaringan terjadi
+   * atas data yang sudah ada di perangkat.
+   */
   const q = useInfiniteQuery({
-    queryKey: ["klasifikasi", "riwayat", chip, cariTertunda],
+    queryKey: ["klasifikasi", "riwayat", chip],
     queryFn: ({ pageParam }) =>
       riwayatKlasifikasi({
         page: pageParam,
         kategori: chip === SEMUA ? undefined : chip,
-        q: cariTertunda.trim() || undefined,
       }),
     initialPageParam: 1,
     getNextPageParam: (halaman) =>
@@ -84,7 +105,20 @@ export default function RiwayatKlasifikasi() {
         : undefined,
   });
 
-  const daftar = q.data?.pages.flatMap((h) => h.data) ?? [];
+  const semua = q.data?.pages.flatMap((h) => h.data) ?? [];
+
+  // Dicocokkan ke nama benda dan materialnya, dua hal yang memang diingat
+  // pengguna. Cakupannya terbatas pada halaman yang sudah dimuat, dan keadaan
+  // kosong di bawah mengatakan itu apa adanya alih-alih menyiratkan riwayatnya
+  // memang tidak memuat apa pun.
+  const kunci = cariTertunda.trim().toLowerCase();
+  const daftar = kunci
+    ? semua.filter(
+        (c) =>
+          c.jenis.toLowerCase().includes(kunci) ||
+          (c.material?.toLowerCase().includes(kunci) ?? false),
+      )
+    : semua;
 
   // Sisipkan pemisah tanggal di antara item. Dihitung dari daftar yang sudah
   // digabung, bukan per halaman, supaya judul tanggal tidak terulang setiap
@@ -139,9 +173,7 @@ export default function RiwayatKlasifikasi() {
               accessibilityLabel={`Saring kategori ${label}`}
               accessibilityState={{ selected: aktif }}
             >
-              <Text
-                style={[styles.chipText, aktif && { color: colors.white }]}
-              >
+              <Text style={[styles.chipText, aktif && { color: colors.white }]}>
                 {label}
               </Text>
             </Pressable>
@@ -188,7 +220,11 @@ export default function RiwayatKlasifikasi() {
               <EmptyState
                 icon="search"
                 judul="Tidak ada yang cocok"
-                pesan="Coba ubah kata pencarian atau pilih kategori lain."
+                pesan={
+                  kunci && q.hasNextPage
+                    ? "Pencarian menjangkau riwayat yang sudah dimuat. Gulir ke bawah untuk memuat lebih banyak, atau ubah kata pencarian."
+                    : "Coba ubah kata pencarian atau pilih kategori lain."
+                }
                 aksiLabel="Tampilkan semua"
                 onAksi={() => {
                   setCari("");
@@ -222,7 +258,7 @@ function Kartu({ c }: { c: HasilKlasifikasi }) {
       <View style={styles.thumb}>
         {c.foto_url ? (
           <Image
-            source={{ uri: c.foto_url }}
+            source={{ uri: urlMedia(c.foto_url) }}
             style={styles.thumbImg}
             accessibilityIgnoresInvertColors
           />

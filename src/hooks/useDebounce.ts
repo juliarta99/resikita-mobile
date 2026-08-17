@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
  * Tunda perubahan nilai sampai pengguna berhenti mengetik.
  *
  * Dipakai untuk kotak pencarian yang menyaring lewat peladen. Tanpa penundaan,
- * setiap ketukan tombol jadi satu permintaan — mengetik "botol plastik" berarti
+ * setiap ketukan tombol jadi satu permintaan, mengetik "botol plastik" berarti
  * 14 permintaan, dan batas umum API ini 60 per menit. Pengguna akan menabrak
  * `429` hanya dengan mengetik satu kata pencarian.
  *

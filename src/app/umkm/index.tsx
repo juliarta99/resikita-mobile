@@ -21,6 +21,7 @@ import { colors, radius, spacing } from "@/constants/theme";
 import { useDebounce } from "@/hooks/useDebounce";
 import { daftarUmkm } from "@/lib/api/produk";
 import type { Umkm } from "@/types/produk";
+import { urlMedia } from "@/lib/media";
 
 export default function DirektoriUmkm() {
   const [cari, setCari] = useState("");
@@ -130,7 +131,7 @@ function Kartu({ u }: { u: Umkm }) {
       <View style={styles.logo}>
         {u.foto_url ? (
           <Image
-            source={{ uri: u.foto_url }}
+            source={{ uri: urlMedia(u.foto_url) }}
             style={styles.logoIsi}
             accessibilityIgnoresInvertColors
           />

@@ -2,12 +2,12 @@ import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -18,6 +18,7 @@ import { colors, radius, spacing } from "@/constants/theme";
 import { detailKlasifikasi, hapusKlasifikasi } from "@/lib/api/klasifikasi";
 import { confirmDialog, notify } from "@/lib/dialog";
 import { formatRupiahOpsional } from "@/lib/rupiah";
+import { urlMedia } from "@/lib/media";
 
 export default function DetailRiwayat() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -68,19 +69,27 @@ export default function DetailRiwayat() {
   }
 
   const c = q.data;
-  const dibuat = new Date(c.created_at);
-  const tanggal = dibuat.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  // `created_at` boleh `null` menurut kontrak API, dan `new Date(null)`
+  // menghasilkan 1 Januari 1970 — tanggal yang tampak sah di layar sehingga
+  // tidak ada yang curiga bahwa timestamp-nya sebenarnya kosong.
+  const dibuat = c.created_at ? new Date(c.created_at) : null;
+  const sah = !!dibuat && !Number.isNaN(dibuat.getTime());
+  const tanggal = sah
+    ? dibuat.toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : "Tidak tercatat";
   // Tanpa sebutan zona: timestamp dari API adalah UTC, dan `toLocaleTimeString`
   // sudah menerjemahkannya ke zona perangkat. Menempelkan "WIB" seperti versi
   // sebelumnya akan salah bagi pengguna di WITA dan WIT.
-  const waktu = dibuat.toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const waktu = sah
+    ? dibuat.toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "--:--";
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
@@ -90,7 +99,7 @@ export default function DetailRiwayat() {
         </Pressable>
         <Text style={styles.appbarTitle}>Detail Riwayat</Text>
         {/*
-          Ikon "bagikan" versi sebelumnya tidak terpasang ke aksi apa pun —
+          Ikon "bagikan" versi sebelumnya tidak terpasang ke aksi apa pun,
           tombol yang tidak melakukan apa-apa lebih buruk daripada tidak ada
           tombol. Dihapus sampai ada fitur berbagi yang benar-benar ada.
         */}
@@ -114,7 +123,7 @@ export default function DetailRiwayat() {
         <View style={styles.hero}>
           {c.foto_url ? (
             <Image
-              source={{ uri: c.foto_url }}
+              source={{ uri: urlMedia(c.foto_url) }}
               style={styles.heroImg}
               accessibilityIgnoresInvertColors
               accessibilityLabel={`Foto ${c.jenis}`}
@@ -162,7 +171,7 @@ export default function DetailRiwayat() {
               label="Keyakinan AI"
               value={
                 c.keyakinan_rendah
-                  ? `${Math.round(c.confidence)}% — masih dugaan`
+                  ? `${Math.round(c.confidence)}%, masih dugaan`
                   : `${Math.round(c.confidence)}%`
               }
             />

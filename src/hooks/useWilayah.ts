@@ -1,7 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { anakWilayah, daftarProvinsi, resolusiWilayah } from "@/lib/api/wilayah";
+import {
+    anakWilayah,
+    daftarProvinsi,
+    resolusiWilayah,
+} from "@/lib/api/wilayah";
 import type { TingkatWilayah } from "@/types/enums";
 import type { Wilayah } from "@/types/wilayah";
 
@@ -21,7 +25,7 @@ const KOSONG: PilihanWilayah = {
 const URUTAN: TingkatWilayah[] = ["provinsi", "kabupaten", "kecamatan", "desa"];
 
 /**
- * Data wilayah praktis tidak berubah selama aplikasi terbuka — pemekaran daerah
+ * Data wilayah praktis tidak berubah selama aplikasi terbuka, pemekaran daerah
  * terjadi hitungan tahun sekali. Menandainya tidak pernah basi menghapus
  * pemanggilan ulang setiap kali pemilih dibuka tutup, yang pada pemilih
  * bertingkat empat terjadi sangat sering.
@@ -36,7 +40,7 @@ const ringkas = (w?: Wilayah | null): WilayahTerpilih | null =>
  *
  * Profil pengguna hanya menyimpan **satu** wilayah (§3.1), biasanya tingkat
  * desa. Yang membuatnya cukup untuk memulihkan pemilih adalah relasi `parent`
- * yang rekursif — kalau peladen tidak memuatnya, tingkat di atasnya memang
+ * yang rekursif, kalau peladen tidak memuatnya, tingkat di atasnya memang
  * tidak bisa dipulihkan, dan pemilih dibiarkan kosong alih-alih diisi tebakan.
  */
 function pecahJenjang(wilayah?: Wilayah | null): PilihanWilayah {
@@ -54,7 +58,7 @@ function pecahJenjang(wilayah?: Wilayah | null): PilihanWilayah {
  *
  * Tiap tingkat hanya dimuat setelah induknya dipilih. Ini bukan pengoptimalan
  * yang bisa ditawar: daftar desa se-Indonesia sekitar 84.000 baris, dan
- * memuatnya sekaligus akan menghabiskan memori perangkat kelas bawah — persis
+ * memuatnya sekaligus akan menghabiskan memori perangkat kelas bawah, persis
  * perangkat yang paling banyak dipakai pengguna aplikasi ini.
  *
  * @param awal Wilayah yang sudah tersimpan di profil, untuk mengisi pemilih
@@ -96,13 +100,10 @@ export function useWilayah(awal?: Wilayah | null) {
    * Pilih satu tingkat, dan kosongkan seluruh tingkat di bawahnya.
    *
    * Tanpa pengosongan itu, mengganti provinsi akan menyisakan desa dari
-   * provinsi sebelumnya — dan `wilayah_id` yang terkirim menunjuk tempat yang
+   * provinsi sebelumnya, dan `wilayah_id` yang terkirim menunjuk tempat yang
    * sama sekali berbeda dari yang tampak dipilih pengguna.
    */
-  const pilih = (
-    tingkat: TingkatWilayah,
-    wilayah: WilayahTerpilih | null,
-  ) => {
+  const pilih = (tingkat: TingkatWilayah, wilayah: WilayahTerpilih | null) => {
     setPilihan((sebelumnya) => {
       const berikutnya: PilihanWilayah = { ...sebelumnya, [tingkat]: wilayah };
       for (const lebihDalam of URUTAN.slice(URUTAN.indexOf(tingkat) + 1)) {
@@ -118,7 +119,7 @@ export function useWilayah(awal?: Wilayah | null) {
    * Isi keempat tingkat sekaligus dari sebuah koordinat.
    *
    * `POST /wilayah/resolusi` adalah satu-satunya endpoint yang mengembalikan
-   * seluruh jenjang sekaligus — `/wilayah/cari` dan `/wilayah/terdekat`
+   * seluruh jenjang sekaligus, `/wilayah/cari` dan `/wilayah/terdekat`
    * mengembalikan wilayah dengan satu tingkat induk saja, tidak cukup untuk
    * memulihkan pemilih bertingkat empat.
    *

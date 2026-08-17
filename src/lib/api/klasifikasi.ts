@@ -1,18 +1,24 @@
 /** Klasifikasi sampah. Rujukan: API-DOCS.md §5. */
 
-import type { Halaman } from "@/types/api";
 import type {
-  HasilKlasifikasi,
-  ParamsRiwayatKlasifikasi,
-  RingkasanKlasifikasi,
+    HasilKlasifikasi,
+    ParamsRiwayatKlasifikasi,
+    RingkasanKlasifikasi,
 } from "@/types/klasifikasi";
-import { TIMEOUT_AI, appendFoto, del, get, pastikanHalaman, postMultipart } from "./client";
+import {
+    TIMEOUT_AI,
+    appendFoto,
+    del,
+    get,
+    pastikanHalaman,
+    postMultipart,
+} from "./client";
 
 /**
  * Kirim satu foto untuk dikenali.
  *
  * Sinkron, biasanya 3–8 detik. Gagal `503` berarti layanan AI tidak dapat
- * dihubungi — foto tidak tersimpan dan tidak ada riwayat yang terbentuk,
+ * dihubungi, foto tidak tersimpan dan tidak ada riwayat yang terbentuk,
  * sehingga aman dicoba ulang atas perintah pengguna.
  */
 export async function klasifikasi(uri: string) {

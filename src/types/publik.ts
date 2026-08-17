@@ -11,7 +11,7 @@ export type RingkasanNasional = {
   tps: number;
   umkm: number;
   warga: number;
-  /** Kilogram, boleh pecahan — ini berat, bukan uang. */
+  /** Kilogram, boleh pecahan, ini berat, bukan uang. */
   berat_teralihkan_kg: number;
   nilai_ke_warga: Rupiah;
 };
@@ -27,7 +27,7 @@ export type MetrikSuara = {
  * Respons `GET /publik/statistik`.
  *
  * Di-cache 15 menit di peladen. Jangan menjadwalkan pemanggilan ulang lebih
- * sering dari itu — jawabannya tidak akan berubah.
+ * sering dari itu, jawabannya tidak akan berubah.
  */
 export type StatistikPublik = {
   ringkasan: RingkasanNasional;
@@ -43,7 +43,7 @@ export type StatistikPublik = {
  *
  * Bentuk ini disusun dari respons nyata, bukan tebakan. Yang perlu diketahui:
  * **tidak ada `id`.** Endpoint ini murni untuk menggambar titik, sehingga dari
- * peta publik tidak ada jalan langsung ke halaman detail fasilitas — lihat
+ * peta publik tidak ada jalan langsung ke halaman detail fasilitas, lihat
  * catatan T21.
  */
 export type TitikPeta = {

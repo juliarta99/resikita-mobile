@@ -1,11 +1,21 @@
 import { TENGAH_NUSANTARA, ZOOM_NASIONAL } from "@/constants/peta";
 
-export type LeafletMarker = { id: string | number; lat: number; lng: number; color?: string };
-type Opts = { center: { lat: number; lng: number }; zoom?: number; pick?: boolean; markers?: LeafletMarker[] };
+export type LeafletMarker = {
+  id: string | number;
+  lat: number;
+  lng: number;
+  color?: string;
+};
+type Opts = {
+  center: { lat: number; lng: number };
+  zoom?: number;
+  pick?: boolean;
+  markers?: LeafletMarker[];
+};
 
 /** Bangun HTML peta Leaflet + OpenStreetMap (tanpa API key). */
 export function buildLeafletHtml(opts: Opts): string {
-  // Cadangan nasional, bukan koordinat satu daerah tertentu — lihat
+  // Cadangan nasional, bukan koordinat satu daerah tertentu, lihat
   // `constants/peta.ts`.
   const lat = opts.center?.lat ?? TENGAH_NUSANTARA.lat;
   const lng = opts.center?.lng ?? TENGAH_NUSANTARA.lng;
@@ -35,7 +45,7 @@ function send(o){var s=JSON.stringify(o);if(window.ReactNativeWebView&&window.Re
 /* Atribusi ODbL wajib mengarah ke halaman hak cipta OSM, tapi membiarkan
    tautannya menavigasi WebView berarti peta tertimpa halaman itu tanpa jalan
    kembali. Kliknya dicegat lalu diteruskan ke aplikasi untuk dibuka di peramban
-   sistem — satu perilaku yang sama di web maupun native. */
+   sistem, satu perilaku yang sama di web maupun native. */
 document.addEventListener('click',function(e){var t=e.target;if(!t||!t.closest)return;var a=t.closest('.leaflet-control-attribution a');if(a&&a.href){e.preventDefault();send({type:'link',url:a.href});}});
 var pin=null;
 function setPin(la,ln){if(pin){pin.setLatLng([la,ln]);}else{pin=L.marker([la,ln],{icon:icon('red'),draggable:true}).addTo(map);pin.on('dragend',function(e){var p=e.target.getLatLng();send({type:'press',lat:p.lat,lng:p.lng});});}}
