@@ -19,6 +19,7 @@ import EmptyState from "@/components/states/EmptyState";
 import ErrorState from "@/components/states/ErrorState";
 import LoadingState from "@/components/states/LoadingState";
 import { colors, radius, spacing } from "@/constants/theme";
+import { useBottomPad } from "@/hooks/useBottomPad";
 import { hapusSesiChat, sesiChat } from "@/lib/api/chatbot";
 import { confirmDialog, notify } from "@/lib/dialog";
 import type { SesiChat } from "@/types/chatbot";
@@ -50,6 +51,10 @@ const waktuRelatif = (iso: string | null) => {
 
 export default function RiwayatChatbot() {
   const qc = useQueryClient();
+  // Layar ini tidak punya CTA melayang, jadi cukup satu napas di bawah kartu
+  // terakhir — ditambah tinggi bilah navigasi HP, yang sebelumnya terlewat dan
+  // membuat kartu paling bawah tertimpa tombol navigasi.
+  const padBawah = useBottomPad(30);
 
   const q = useInfiniteQuery({
     queryKey: ["chatbot", "daftar-sesi"],
@@ -105,7 +110,7 @@ export default function RiwayatChatbot() {
           contentContainerStyle={
             daftar.length === 0
               ? { flexGrow: 1 }
-              : { padding: spacing.lg, paddingBottom: 30 }
+              : { padding: spacing.lg, paddingBottom: padBawah }
           }
           renderItem={({ item }) => (
             <Kartu

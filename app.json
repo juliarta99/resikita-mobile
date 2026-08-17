@@ -48,7 +48,9 @@
           "microphonePermission": "Resikita memakai mikrofon agar Anda bisa mendiktekan laporan dan pertanyaan tanpa mengetik.",
           "speechRecognitionPermission": "Ucapan Anda diubah menjadi teks, ditampilkan lebih dulu untuk Anda periksa, baru dikirim."
         }
-      ]
+      ],
+      "expo-image",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

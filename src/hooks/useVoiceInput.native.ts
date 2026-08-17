@@ -1,10 +1,46 @@
-import {
-  ExpoSpeechRecognitionModule,
-  useSpeechRecognitionEvent,
-} from "expo-speech-recognition";
 import { useCallback, useState } from "react";
 
 import { BAHASA_STT, type HasilVoiceInput } from "@/types/suara";
+
+type ModulSTT = typeof import("expo-speech-recognition");
+
+/**
+ * Modul pengenalan ucapan, dimuat dengan cara yang boleh gagal.
+ *
+ * `expo-speech-recognition` memanggil `requireNativeModule("ExpoSpeechRecognition")`
+ * di **tingkat modulnya sendiri**, dan panggilan itu melempar ketika modul
+ * native tidak ada — di Expo Go, atau pada build yang dibuat sebelum paket ini
+ * ditambahkan. Impor statis karenanya menjatuhkan seluruh layar yang menyentuh
+ * hook ini, dengan galat yang menunjuk komponen acak yang kebetulan sedang
+ * dirender, bukan penyebabnya.
+ *
+ * `require` di dalam `try` menahan lemparan itu. Hasilnya dihitung sekali saat
+ * berkas dimuat: keberadaan modul native tidak berubah selama aplikasi hidup,
+ * jadi percabangan di sini tetap dan tidak melanggar aturan urutan hook.
+ *
+ * Ini mewujudkan ketentuan CLAUDE.md §9: bila STT tidak tersedia, tombolnya
+ * disembunyikan — bukan memunculkan galat.
+ */
+const modul: ModulSTT | null = (() => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require("expo-speech-recognition") as ModulSTT;
+  } catch {
+    return null;
+  }
+})();
+
+const Pengenal = modul?.ExpoSpeechRecognitionModule ?? null;
+
+/**
+ * Pendengar peristiwa, atau pengganti kosong bila modulnya tidak ada.
+ *
+ * Nilainya ditetapkan sekali dan tidak pernah berganti, sehingga jumlah hook
+ * yang dipanggil tiap render selalu sama.
+ */
+const usePeristiwaSTT: ModulSTT["useSpeechRecognitionEvent"] =
+  modul?.useSpeechRecognitionEvent ??
+  (() => {}) as ModulSTT["useSpeechRecognitionEvent"];
 
 /** Pesan galat yang layak dibaca pengguna, bukan kode mentah dari sistem. */
 function pesanGalat(kode: string): string | null {
@@ -34,23 +70,34 @@ export function useVoiceInput(): HasilVoiceInput {
   // Dievaluasi tiap render, bukan disimpan sekali: ketersediaan pengenal ucapan
   // di Android bergantung pada paket layanan Google yang bisa dipasang atau
   // dinonaktifkan pengguna kapan saja.
-  const didukung = ExpoSpeechRecognitionModule.isRecognitionAvailable();
+  //
+  // Pemeriksaannya sendiri dibungkus karena `isRecognitionAvailable` menyentuh
+  // sisi native, dan sisi itu bisa menolak walau modulnya berhasil dimuat.
+  let didukung = false;
+  if (Pengenal) {
+    try {
+      didukung = Pengenal.isRecognitionAvailable();
+    } catch {
+      didukung = false;
+    }
+  }
 
-  useSpeechRecognitionEvent("result", (peristiwa) => {
+  usePeristiwaSTT("result", (peristiwa) => {
     const ucapan = peristiwa.results?.[0]?.transcript ?? "";
     if (ucapan) setTeks(ucapan);
   });
 
-  useSpeechRecognitionEvent("error", (peristiwa) => {
+  usePeristiwaSTT("error", (peristiwa) => {
     setGalat(pesanGalat(peristiwa.error));
     setMerekam(false);
   });
 
-  useSpeechRecognitionEvent("end", () => setMerekam(false));
+  usePeristiwaSTT("end", () => setMerekam(false));
 
   const mulai = useCallback(async () => {
+    if (!Pengenal) return;
     setGalat(null);
-    const izin = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    const izin = await Pengenal.requestPermissionsAsync();
     if (!izin.granted) {
       setGalat(
         "Izin mikrofon diperlukan untuk mendiktekan. Anda tetap bisa mengetik.",
@@ -59,7 +106,7 @@ export function useVoiceInput(): HasilVoiceInput {
     }
     setTeks("");
     setMerekam(true);
-    ExpoSpeechRecognitionModule.start({
+    Pengenal.start({
       lang: BAHASA_STT,
       // Hasil sementara ditampilkan supaya pengguna melihat ucapannya tertulis
       // saat itu juga, bukan menatap layar diam sambil menebak apakah
@@ -70,7 +117,7 @@ export function useVoiceInput(): HasilVoiceInput {
   }, []);
 
   const berhenti = useCallback(() => {
-    ExpoSpeechRecognitionModule.stop();
+    Pengenal?.stop();
     setMerekam(false);
   }, []);
 

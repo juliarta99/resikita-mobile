@@ -3,17 +3,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Href, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import SpeechButton from "@/components/SpeechButton";
 import TypingDots from "@/components/TypingDots";
@@ -21,10 +25,10 @@ import { colors, radius, spacing } from "@/constants/theme";
 import { useSpeech } from "@/hooks/useSpeech";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import {
-    detailSesiChat,
-    kirimPesanChat,
-    saranPertanyaan,
-    tandaiDibacakan,
+  detailSesiChat,
+  kirimPesanChat,
+  saranPertanyaan,
+  tandaiDibacakan,
 } from "@/lib/api/chatbot";
 import { ApiError } from "@/lib/api/error";
 import type { PesanChat, SesiChat } from "@/types/chatbot";
@@ -102,6 +106,46 @@ export default function Chatbot() {
    */
   const speech = useSpeech();
   const suara = useVoiceInput();
+
+  /**
+   * Ruang bawah untuk komposer.
+   *
+   * `SafeAreaView` layar ini sengaja hanya menjaga sisi atas: kalau sisi bawah
+   * ikut dijaga, latar putih komposer berhenti tepat di atas bilah navigasi HP
+   * dan menyisakan pita abu-abu di bawahnya. Ruangnya ditambahkan di dalam
+   * komposer sendiri, sehingga warnanya tetap sampai ke tepi layar sementara
+   * isinya tidak tertimpa tombol navigasi.
+   *
+   * Ruang itu dilepas begitu papan ketik terbuka. Papan ketik menutupi bilah
+   * navigasi, jadi menyisakan tempat untuk sesuatu yang sedang tidak terlihat
+   * hanya melahirkan celah kosong di antara kolom teks dan papan ketik.
+   */
+  const insets = useSafeAreaInsets();
+  const [papanKetikTampil, setPapanKetikTampil] = useState(false);
+
+  useEffect(() => {
+    // iOS mengumumkan papan ketik sebelum animasinya jalan, Android hanya
+    // sesudah; memakai peristiwa yang salah membuat komposer tersentak.
+    const tampil = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => {
+        setPapanKetikTampil(true);
+        // Daftar menyusut saat papan ketik naik, dan yang tersembunyi adalah
+        // pesan terakhir — justru yang sedang dibalas pengguna.
+        daftarRef.current?.scrollToEnd({ animated: true });
+      },
+    );
+    const sembunyi = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => setPapanKetikTampil(false),
+    );
+    return () => {
+      tampil.remove();
+      sembunyi.remove();
+    };
+  }, []);
+
+  const padBawah = papanKetikTampil ? 0 : insets.bottom;
 
   const sesiQ = useQuery({
     queryKey: ["chatbot", "sesi", sesiId],
@@ -256,36 +300,46 @@ export default function Chatbot() {
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
-      <View style={styles.appbar}>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel="Kembali"
-        >
-          <Feather name="arrow-left" size={24} color={colors.text} />
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.appbarTitle}>Asisten Resikita</Text>
-          <Text style={styles.appbarSub}>
-            {kirim.isPending ? "Sedang mengetik…" : "Tanya soal sampah"}
-          </Text>
-        </View>
-        <Pressable
-          onPress={() => router.push("/chatbot/riwayat" as Href)}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel="Riwayat percakapan"
-        >
-          <Feather name="clock" size={22} color={colors.text} />
-        </Pressable>
-      </View>
+      {/*
+        Penghindar papan ketik membungkus **seluruh** isi layar, bilah judul
+        ikut di dalamnya.
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={80}
-      >
+        `KeyboardAvoidingView` menghitung tumpang tindih antara kotaknya
+        sendiri dan papan ketik, dan kotak itu diukur relatif terhadap induk.
+        Ketika ia dipasang di bawah bilah judul, sisi bawah kotaknya terbaca
+        setinggi bilah judul lebih tinggi daripada sisi bawah layar yang
+        sebenarnya, sehingga bantalannya selalu kurang — dan kekurangan itulah
+        yang dulu ditambal dengan `keyboardVerticalOffset={80}`, angka yang
+        hanya kebetulan cocok di satu ukuran layar. Sebagai anak langsung
+        SafeAreaView, kotaknya berakhir tepat di dasar layar dan tumpang
+        tindihnya sama persis dengan tinggi papan ketik, tanpa angka ajaib.
+      */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+        <View style={styles.appbar}>
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Kembali"
+          >
+            <Feather name="arrow-left" size={24} color={colors.text} />
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.appbarTitle}>Asisten Resikita</Text>
+            <Text style={styles.appbarSub}>
+              {kirim.isPending ? "Sedang mengetik…" : "Tanya soal sampah"}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => router.push("/chatbot/riwayat" as Href)}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Riwayat percakapan"
+          >
+            <Feather name="clock" size={22} color={colors.text} />
+          </Pressable>
+        </View>
+
         {kosong ? (
           <View style={styles.sambutan}>
             <View style={styles.sambutanIkon}>
@@ -337,6 +391,10 @@ export default function Chatbot() {
             data={baris}
             keyExtractor={(b) => b.kunci}
             contentContainerStyle={{ padding: spacing.md, gap: 12 }}
+            // Tanpa ini, ketukan pertama saat papan ketik terbuka hanya menutup
+            // papan ketik. Tombol dengar pada balasan jadi menuntut dua
+            // ketukan, dan yang pertama tidak memberi umpan balik apa pun.
+            keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => {
               if (item.jenis === "antrean") {
                 return <GelembungAntrean antrean={item.antrean} />;
@@ -375,71 +433,80 @@ export default function Chatbot() {
           </Text>
         )}
 
-        <View style={styles.komposer}>
-          <TextInput
-            style={styles.input}
-            value={teks}
-            onChangeText={(v) => {
-              setTeks(v);
-              if (!v.trim() && sumber === "suara") setSumber("ketik");
-            }}
-            placeholder={
-              suara.merekam ? "Mendengarkan…" : "Tulis pertanyaan Anda…"
-            }
-            placeholderTextColor="#9AA5B1"
-            multiline
-            editable={!suara.merekam}
-            accessibilityLabel="Pertanyaan untuk asisten"
-          />
+        {/*
+          Komposer dan galat suara berbagi satu wadah supaya keduanya berada di
+          atas bilah navigasi. Sebelumnya galat suara tersusun setelah komposer
+          dan ikut tenggelam ke tepi layar.
+        */}
+        <View style={[styles.footer, { paddingBottom: padBawah }]}>
+          <View style={styles.komposer}>
+            <TextInput
+              style={styles.input}
+              value={teks}
+              onChangeText={(v) => {
+                setTeks(v);
+                if (!v.trim() && sumber === "suara") setSumber("ketik");
+              }}
+              placeholder={
+                suara.merekam ? "Mendengarkan…" : "Tulis pertanyaan Anda…"
+              }
+              placeholderTextColor="#9AA5B1"
+              multiline
+              editable={!suara.merekam}
+              accessibilityLabel="Pertanyaan untuk asisten"
+            />
 
-          {suara.didukung && (
+            {suara.didukung && (
+              <Pressable
+                style={[styles.mic, suara.merekam && styles.micAktif]}
+                onPress={() =>
+                  suara.merekam ? suara.berhenti() : suara.mulai()
+                }
+                accessibilityRole="button"
+                accessibilityLabel={
+                  suara.merekam
+                    ? "Berhenti merekam"
+                    : "Diktekan pertanyaan dengan suara"
+                }
+                accessibilityHint={
+                  suara.merekam
+                    ? undefined
+                    : "Ucapan Anda muncul di kolom teks dan bisa disunting sebelum dikirim"
+                }
+                accessibilityState={{ busy: suara.merekam }}
+              >
+                <Feather
+                  name={suara.merekam ? "square" : "mic"}
+                  size={18}
+                  color={suara.merekam ? colors.white : colors.brand}
+                />
+              </Pressable>
+            )}
+
             <Pressable
-              style={[styles.mic, suara.merekam && styles.micAktif]}
-              onPress={() => (suara.merekam ? suara.berhenti() : suara.mulai())}
+              style={[
+                styles.kirim,
+                (!teks.trim() || kirim.isPending) && styles.kirimMati,
+              ]}
+              onPress={() => kirimPesan()}
+              disabled={!teks.trim() || kirim.isPending}
               accessibilityRole="button"
-              accessibilityLabel={
-                suara.merekam
-                  ? "Berhenti merekam"
-                  : "Diktekan pertanyaan dengan suara"
-              }
-              accessibilityHint={
-                suara.merekam
-                  ? undefined
-                  : "Ucapan Anda muncul di kolom teks dan bisa disunting sebelum dikirim"
-              }
-              accessibilityState={{ busy: suara.merekam }}
+              accessibilityLabel="Kirim pertanyaan"
+              accessibilityState={{
+                disabled: !teks.trim() || kirim.isPending,
+                busy: kirim.isPending,
+              }}
             >
-              <Feather
-                name={suara.merekam ? "square" : "mic"}
-                size={18}
-                color={suara.merekam ? colors.white : colors.brand}
-              />
+              <Feather name="send" size={18} color={colors.white} />
             </Pressable>
+          </View>
+
+          {!!suara.galat && (
+            <Text style={styles.galatSuara} accessibilityLiveRegion="polite">
+              {suara.galat}
+            </Text>
           )}
-
-          <Pressable
-            style={[
-              styles.kirim,
-              (!teks.trim() || kirim.isPending) && styles.kirimMati,
-            ]}
-            onPress={() => kirimPesan()}
-            disabled={!teks.trim() || kirim.isPending}
-            accessibilityRole="button"
-            accessibilityLabel="Kirim pertanyaan"
-            accessibilityState={{
-              disabled: !teks.trim() || kirim.isPending,
-              busy: kirim.isPending,
-            }}
-          >
-            <Feather name="send" size={18} color={colors.white} />
-          </Pressable>
         </View>
-
-        {!!suara.galat && (
-          <Text style={styles.galatSuara} accessibilityLiveRegion="polite">
-            {suara.galat}
-          </Text>
-        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -620,15 +687,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: 8,
   },
+  /*
+    Latar dan garis pemisah ada di wadah luar, bukan di baris komposer, supaya
+    putihnya ikut menutupi ruang bilah navigasi di bawahnya. Kalau ditaruh di
+    baris komposer, ruang itu memperlihatkan latar layar dan komposer tampak
+    melayang di atas pita abu-abu.
+  */
+  footer: {
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   komposer: {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 8,
-    backgroundColor: colors.white,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   input: {
     flex: 1,

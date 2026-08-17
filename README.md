@@ -6,75 +6,144 @@ Aplikasi ini mengonsumsi REST API dari repositori backend **`resikita`** (Larave
 
 Disusun untuk **GEMASTIK 2026**, Divisi Pengembangan Perangkat Lunak.
 
+| Kunci            | Nilai                                                |
+| ---------------- | ---------------------------------------------------- |
+| Expo SDK         | 57                                                   |
+| React Native     | 0.86.2                                               |
+| React            | 19.2.3                                               |
+| TypeScript       | 6.0.3, mode `strict`                                 |
+| Id paket Android | `com.juliarta99.resikita`                            |
+| Skema deep link  | `resikita://`                                        |
+| Lisensi          | [MIT](LICENSE)                                       |
+| Daftar komponen  | [`KOMPONEN-DAN-LISENSI.md`](KOMPONEN-DAN-LISENSI.md) |
+| Kontrak API      | [`API-DOCS.md`](API-DOCS.md)                         |
+
 ---
 
 ## Daftar Isi
 
-1. [Prasyarat](#1-prasyarat)
-2. [Instalasi](#2-instalasi)
-3. [Konfigurasi](#3-konfigurasi)
-4. [Menjalankan Aplikasi](#4-menjalankan-aplikasi)
-5. [Membangun Berkas Rilis](#5-membangun-berkas-rilis)
-6. [Perintah Lain](#6-perintah-lain)
-7. [Pemecahan Masalah](#7-pemecahan-masalah)
-8. [Fitur Aplikasi](#8-fitur-aplikasi)
-9. [Arsitektur](#9-arsitektur)
-10. [Struktur Direktori](#10-struktur-direktori)
-11. [Aturan Pengembangan](#11-aturan-pengembangan)
-12. [Lisensi](#12-lisensi)
+1. [Mulai Cepat](#1-mulai-cepat)
+2. [Prasyarat](#2-prasyarat)
+3. [Klon dan Instalasi](#3-klon-dan-instalasi)
+4. [Konfigurasi](#4-konfigurasi)
+5. [Menjalankan Aplikasi](#5-menjalankan-aplikasi)
+6. [Membangun Berkas Rilis](#6-membangun-berkas-rilis)
+7. [Perintah Lain](#7-perintah-lain)
+8. [Pemecahan Masalah](#8-pemecahan-masalah)
+9. [Fitur Aplikasi](#9-fitur-aplikasi)
+10. [Arsitektur](#10-arsitektur)
+11. [Struktur Direktori](#11-struktur-direktori)
+12. [Aturan Pengembangan](#12-aturan-pengembangan)
+13. [Lisensi](#13-lisensi)
 
 ---
 
-## 1. Prasyarat
+## 1. Mulai Cepat
+
+Jalur tercepat dari repositori kosong sampai aplikasi terbuka, lewat **web**. Tidak butuh Android Studio, tidak butuh Xcode, tidak butuh perangkat.
+
+```bash
+git clone https://github.com/juliarta99/niti-resik-mobile.git resikita_mobile
+cd resikita_mobile
+npm install
+cp .env.example .env        # Windows PowerShell: Copy-Item .env.example .env
+# buka .env, isi EXPO_PUBLIC_API_URL
+npm run web
+```
+
+Peramban terbuka di `http://localhost:8081`. Bila layar masuk muncul, pemasangannya berhasil.
+
+Bila seluruh layar justru menampilkan galat jaringan, `EXPO_PUBLIC_API_URL` belum benar atau backendnya belum berjalan, lihat [Bagian 4](#4-konfigurasi). Untuk menjalankan di Android atau iOS, lanjut ke [Bagian 5](#5-menjalankan-aplikasi), ada beberapa hal yang perlu dipahami lebih dulu di sana.
+
+---
+
+## 2. Prasyarat
+
+### Wajib, untuk semua target
 
 | Kebutuhan              | Versi                                                      | Keterangan                                                                                    |
 | ---------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **Node.js**            | `^20.19.4` atau `^22.13.0` atau `^24.3.0` atau `>= 25.0.0` | Syarat React Native 0.86. Versi Node di luar rentang ini akan gagal saat bundling             |
+| **Node.js**            | `^20.19.4` atau `^22.13.0` atau `^24.3.0` atau `>= 25.0.0` | Syarat React Native 0.86. Versi Node di luar rentang ini gagal saat bundling                  |
 | **npm**                | 10 atau lebih baru                                         | Ikut terpasang bersama Node                                                                   |
 | **Git**                | bebas                                                      |                                                                                               |
 | **Backend `resikita`** | berjalan dan dapat dijangkau                               | Aplikasi ini tidak punya data lokal; tanpa API, seluruh layar hanya menampilkan keadaan galat |
 
-Opsional, sesuai target yang ingin dicoba:
-
-| Target          | Yang perlu disiapkan                                                               |
-| --------------- | ---------------------------------------------------------------------------------- |
-| **Web**         | Tidak ada. Cukup peramban, cara tercepat menguji perubahan                         |
-| **Android**     | Android Studio beserta emulator, atau perangkat fisik dengan mode pengembang aktif |
-| **iOS**         | macOS beserta Xcode. Tidak tersedia di Windows maupun Linux                        |
-| **Build rilis** | Akun [Expo](https://expo.dev) dan `eas-cli` (`npm install -g eas-cli`)             |
-
-Verifikasi versi Node sebelum melanjutkan:
+Periksa versi sebelum melanjutkan:
 
 ```bash
 node -v
 npm -v
 ```
 
----
-
-## 2. Instalasi
+Bila versi Node Anda di luar rentang, pakai pengelola versi ([nvm](https://github.com/nvm-sh/nvm), [nvm-windows](https://github.com/coreybutler/nvm-windows), atau [fnm](https://github.com/Schniz/fnm)) alih-alih memasang ulang Node sistem:
 
 ```bash
-git clone <url-repositori> niti-resik-masyarakat
-cd niti-resik-masyarakat
+nvm install 22
+nvm use 22
+```
+
+### Tambahan, sesuai target
+
+| Target                        | Yang perlu disiapkan                                                                                                                                  |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Web**                       | Tidak ada. Cukup peramban                                                                                                                             |
+| **Android lewat Expo Go**     | Aplikasi [Expo Go](https://expo.dev/go) di ponsel, satu jaringan Wi-Fi dengan komputer. Fitur suara dan notifikasi tidak berjalan, lihat Bagian 5     |
+| **Android lewat build EAS**   | Akun [Expo](https://expo.dev) dan `eas-cli`. Build berjalan di peladen Expo, komputer Anda tidak perlu Android Studio                                 |
+| **Android lewat build lokal** | JDK 17, Android Studio beserta Android SDK, dan satu emulator atau perangkat fisik dengan USB debugging. Ikuti [panduan resmi Expo][expo-env-android] |
+| **iOS**                       | macOS beserta Xcode dan CocoaPods. **Tidak tersedia di Windows maupun Linux**                                                                         |
+
+[expo-env-android]: https://docs.expo.dev/get-started/set-up-your-environment/?platform=android&device=physical&mode=development-build
+
+Untuk membangun berkas rilis, pasang `eas-cli` sekali saja:
+
+```bash
+npm install -g eas-cli
+```
+
+---
+
+## 3. Klon dan Instalasi
+
+```bash
+git clone https://github.com/juliarta99/niti-resik-mobile.git resikita_mobile
+cd resikita_mobile
 npm install
 ```
 
-`npm install` memasang seluruh dependensi dan menjalankan langkah pasca-pemasangan milik Expo. Proses ini memakan beberapa menit pada pemasangan pertama.
+`npm install` memasang seluruh dependensi dan menjalankan langkah pasca-pemasangan milik Expo. Pemasangan pertama memakan beberapa menit dan mengunduh ratusan megabyte.
 
-Gunakan **`npm install`**, bukan `npm ci`, kecuali Anda memang ingin memasang persis isi `package-lock.json` tanpa perubahan apa pun.
+**`npm install` atau `npm ci`?** Pakai `npm install` untuk pengembangan sehari-hari. Pakai `npm ci` di CI atau ketika Anda ingin memasang persis isi `package-lock.json` tanpa satu pun perubahan, `npm ci` menghapus `node_modules` lebih dulu dan menolak berjalan bila lockfile tidak sinkron dengan `package.json`.
+
+Setelah `npm install` selesai, pastikan pohon dependensinya cocok dengan yang diharapkan Expo SDK 57:
+
+```bash
+npx expo install --check
+```
+
+Perintah itu menyebut paket yang versinya di luar rentang yang didukung SDK ini. Tambahkan `--fix` untuk memperbaikinya sekaligus. Ketidakcocokan versi adalah penyebab paling sering dari galat native yang pesannya tidak menunjuk ke mana-mana.
+
+### Direktori `android/` dan `ios/` tidak ada, dan itu memang disengaja
+
+Proyek ini memakai **alur kerja terkelola** (managed workflow) Expo. Kedua direktori native itu masuk `.gitignore` dan dibangkitkan ulang oleh `npx expo prebuild` setiap kali dibutuhkan, dari `app.json`. Konsekuensinya:
+
+- Konfigurasi native diubah lewat `app.json` dan plugin config, **bukan** dengan menyunting berkas Gradle atau Xcode. Suntingan langsung akan hilang pada prebuild berikutnya.
+- Klon yang baru saja selesai tidak perlu langkah tambahan apa pun untuk web maupun Expo Go.
 
 ---
 
-## 3. Konfigurasi
+## 4. Konfigurasi
 
 Salin templat yang sudah tersedia, lalu isi nilainya:
 
 ```bash
+# macOS / Linux / Git Bash
 cp .env.example .env
+
+# Windows PowerShell
+Copy-Item .env.example .env
 ```
 
-Isi `.env` kira-kira seperti ini:
+Templatnya hanya memuat variabel yang wajib. Dua variabel opsional di bawah ditambahkan sendiri bila memang dibutuhkan, `.env` yang lengkap kira-kira seperti ini:
 
 ```dotenv
 # Wajib. Alamat basis REST API, harus berakhiran /api/v1
@@ -97,7 +166,9 @@ EXPO_PUBLIC_KONTAK_APLIKASI=kontak@contoh.id
 | `EXPO_PUBLIC_MIDTRANS_SNAP_URL` | Tidak  | Basis Snap Midtrans. Bawaan: `https://app.midtrans.com/snap/v2/vtweb/` (produksi)           |
 | `EXPO_PUBLIC_KONTAK_APLIKASI`   | Tidak  | Pengenal aplikasi pada `User-Agent` permintaan Nominatim, sesuai kebijakan pemakaian mereka |
 
-### Tiga hal yang sering menjadi masalah
+> **Awalan `EXPO_PUBLIC_` berarti nilainya ikut masuk ke dalam bundel dan dapat dibaca siapa pun** yang membongkar APK atau membuka berkas JavaScript di web. Ini wajar untuk alamat API, tetapi **jangan pernah menaruh kunci rahasia, kunci server Midtrans, atau kredensial apa pun** di sana. Rahasia adalah urusan backend.
+
+### Empat hal yang sering menjadi masalah
 
 **Jangan memakai `localhost` bila menguji di perangkat fisik.** Bagi ponsel, `localhost` berarti ponsel itu sendiri, bukan komputer Anda. Pakai alamat IP lokal komputer pengembang, dan pastikan ponsel berada di jaringan Wi-Fi yang sama.
 
@@ -109,7 +180,18 @@ ipconfig
 ifconfig | grep "inet "
 ```
 
-**Token sandbox Midtrans tidak berlaku di domain produksi.** Bila backend berjalan dalam mode sandbox tetapi `EXPO_PUBLIC_MIDTRANS_SNAP_URL` menunjuk `app.midtrans.com`, halaman pembayaran akan menampilkan "transaksi tidak ditemukan", terbaca seperti pesanannya gagal dibuat, padahal pesanannya baik-baik saja.
+Bila jaringan kantor atau kampus memblokir komunikasi antar-perangkat, sambungkan ponsel lewat USB lalu teruskan portnya:
+
+```bash
+adb reverse tcp:8000 tcp:8000     # port backend
+adb reverse tcp:8081 tcp:8081     # port Metro
+```
+
+Setelah itu `http://localhost:8000/api/v1` justru menjadi alamat yang benar.
+
+**Backend harus mendengarkan di semua antarmuka.** `php artisan serve` secara bawaan hanya mengikat `127.0.0.1` dan tidak terjangkau dari ponsel meski satu Wi-Fi. Jalankan `php artisan serve --host=0.0.0.0` di sisi backend.
+
+**Token sandbox Midtrans tidak berlaku di domain produksi.** Bila backend berjalan dalam mode sandbox tetapi `EXPO_PUBLIC_MIDTRANS_SNAP_URL` menunjuk `app.midtrans.com`, halaman pembayaran menampilkan "transaksi tidak ditemukan", terbaca seperti pesanannya gagal dibuat, padahal pesanannya baik-baik saja.
 
 **Variabel `EXPO_PUBLIC_*` ditanam saat bundling, bukan dibaca saat aplikasi berjalan.** Setelah mengubah `.env`, server pengembangan harus dijalankan ulang dengan tembolok dibersihkan:
 
@@ -121,76 +203,102 @@ Tanpa `-c`, nilai lama tetap terpakai dan perubahan Anda seolah-olah tidak berpe
 
 ---
 
-## 4. Menjalankan Aplikasi
+## 5. Menjalankan Aplikasi
 
-### Cara tercepat: web
+### Ringkasan: tiga cara, kemampuan berbeda
+
+Ini bagian terpenting untuk dipahami sebelum memilih perintah. Aplikasi memakai modul native pihak ketiga yang **tidak ikut dipaketkan di dalam Expo Go**.
+
+| Cara                               | Perintah                              | Fitur suara       | Notifikasi dorong | Butuh Android Studio |
+| ---------------------------------- | ------------------------------------- | ----------------- | ----------------- | -------------------- |
+| **Web**                            | `npm run web`                         | ✅ Web Speech API | ❌                | Tidak                |
+| **Expo Go**                        | `npm start`, lalu pindai kode QR      | ❌                | ❌                | Tidak                |
+| **Development build** (dianjurkan) | `eas build --profile development ...` | ✅                | ✅                | Tidak                |
+| **Build lokal**                    | `npm run android`                     | ✅                | ✅                | **Ya**               |
+
+### Web, jalur pengujian harian
 
 ```bash
 npm run web
 ```
 
-Aplikasi terbuka di peramban. Ini jalur pengujian harian yang dipakai proyek ini, paling cepat memuat ulang dan paling mudah membaca galat konsol.
+Paling cepat memuat ulang dan paling mudah membaca galat konsol. Inilah jalur yang dipakai proyek ini sehari-hari, dan syarat "berjalan di web tanpa galat konsol" ada di [Bagian 12](#12-aturan-pengembangan) justru karena itu.
 
-### Android
-
-```bash
-npm run android
-```
-
-Menjalankan emulator yang aktif, atau perangkat fisik yang terhubung lewat USB dengan USB debugging menyala.
-
-### iOS
-
-```bash
-npm run ios
-```
-
-Hanya berjalan di macOS dengan Xcode terpasang.
-
-### Server pengembangan tanpa target tertentu
+### Expo Go, tanpa perkakas native
 
 ```bash
 npm start
 ```
 
-Menampilkan menu untuk memilih target, beserta kode QR bagi perangkat fisik.
+Metro menampilkan kode QR. Pindai dengan aplikasi Expo Go (Android) atau aplikasi Kamera (iOS). Karena `expo-dev-client` terpasang di proyek ini, Metro terbuka dalam mode development build, tekan **`s`** untuk beralih ke mode Expo Go, lalu pindai QR-nya.
 
-### Catatan penting soal Expo Go
+Yang **tidak** berjalan di Expo Go:
 
-Aplikasi ini memakai modul native pihak ketiga yang **tidak ikut dipaketkan di dalam Expo Go**, terutama `expo-speech-recognition` untuk input suara. Konsekuensinya:
+- **Input suara** (`expo-speech-recognition`), tombol mikrofonnya sengaja disembunyikan, bukan menampilkan galat.
+- **Notifikasi dorong.** Expo membuang push Android dari Expo Go sejak SDK 53. `src/lib/push.ts` mendeteksinya lewat `isRunningInExpoGo()` dan melewati seluruh modulnya, karena `expo-notifications` **melempar galat saat dimuat** di Expo Go pada Android, bukan sekadar memperingatkan.
 
-| Cara menjalankan      | Yang berjalan                                                                                                                          |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **Web**               | Seluruh fitur, termasuk suara, memakai Web Speech API bawaan peramban                                                                  |
-| **Development build** | Seluruh fitur di perangkat. Inilah cara yang disarankan untuk pengujian menyeluruh                                                     |
-| **Expo Go**           | Sebagian besar layar berjalan, tetapi **input suara tidak tersedia** dan notifikasi dorong jarak jauh tidak lagi didukung sejak SDK 53 |
+Selebihnya, seluruh layar dapat ditelusuri normal.
 
-Membuat development build:
+### Development build, cara yang dianjurkan untuk pengujian menyeluruh
+
+Development build adalah APK berisi seluruh modul native proyek ini, tetapi tetap memuat JavaScript dari server Metro Anda. Dibuat sekali, lalu dipakai berulang kali seperti Expo Go.
 
 ```bash
-npx eas build --profile development --platform android
+# Masuk sekali saja
+eas login
+
+# Bangun di peladen Expo, komputer Anda tidak perlu Android Studio
+eas build --profile development --platform android
 ```
 
-Pasang berkas hasilnya di perangkat, lalu jalankan `npm start` seperti biasa, aplikasi akan menyambung ke server pengembangan Anda.
+Unduh APK dari tautan yang diberikan EAS, pasang di perangkat, lalu:
+
+```bash
+npm start
+```
+
+Buka aplikasinya di perangkat, ia menyambung ke server Metro Anda sendiri.
+
+Profil `development` di `eas.json` menyetel `EXPO_PUBLIC_API_URL` ke domain produksi. Bila ingin build itu menunjuk backend lokal, ubah nilainya di `eas.json` sebelum membangun, `.env` lokal **tidak** ikut terbawa ke build EAS.
+
+### Build lokal, bila Anda punya Android Studio
+
+```bash
+npm run android      # sama dengan: expo run:android
+```
+
+Perintah ini **bukan** Expo Go. Ia menjalankan `expo prebuild`, membangkitkan direktori `android/`, lalu menyusun APK dengan Gradle di komputer Anda. Kompilasi pertama memakan waktu lama, dan syaratnya JDK 17 beserta Android SDK yang lengkap.
+
+Untuk iOS, hanya di macOS dengan Xcode:
+
+```bash
+npm run ios
+```
 
 ---
 
-## 5. Membangun Berkas Rilis
+## 6. Membangun Berkas Rilis
 
 Profil build sudah didefinisikan di `eas.json`.
 
 ```bash
 # Masuk sekali saja
-npx eas login
+eas login
 
 # APK untuk pengujian internal
-npx eas build --profile preview --platform android
+eas build --profile preview --platform android
 
-# APK rilis
-npx eas build --profile production --platform android
+# Rilis
+eas build --profile production --platform android
 ```
 
-Kedua profil `preview` dan `production` sudah menetapkan `EXPO_PUBLIC_API_URL` sendiri di `eas.json`, sehingga `.env` lokal Anda **tidak** ikut terbawa ke hasil build.
+| Profil        | Distribusi | Isi                                                              |
+| ------------- | ---------- | ---------------------------------------------------------------- |
+| `development` | internal   | Berisi `expo-dev-client`, memuat JavaScript dari Metro Anda      |
+| `preview`     | internal   | Bundel JavaScript ikut di dalamnya, dapat dibagikan lewat tautan |
+| `production`  | store      | `autoIncrement` menaikkan `versionCode` otomatis di setiap build |
+
+Ketiga profil menetapkan `EXPO_PUBLIC_API_URL` sendiri di `eas.json`, sehingga `.env` lokal Anda **tidak** ikut terbawa ke hasil build. Ini disengaja: build yang menunjuk `192.168.x.x` milik komputer pengembang tidak akan berfungsi di tangan siapa pun.
 
 ### Membangun berkas web statis
 
@@ -202,11 +310,11 @@ Hasilnya berada di direktori `dist/` dan dapat dilayani sebagai situs statis bia
 
 ### Bila build EAS gagal karena lockfile
 
-Pastikan `package-lock.json` sudah ter-commit. Bila terpaksa, `EAS_NO_VCS=1` dapat dipakai sebagai jalan terakhir.
+Pastikan `package-lock.json` sudah ter-commit, EAS mengunggah berkas yang dikenal Git saja. Bila terpaksa, `EAS_NO_VCS=1` dapat dipakai sebagai jalan terakhir.
 
 ---
 
-## 6. Perintah Lain
+## 7. Perintah Lain
 
 ```bash
 # Analisis statis kualitas kode
@@ -217,6 +325,9 @@ npx tsc --noEmit
 
 # Membersihkan tembolok bundler saat perilaku terasa aneh
 npx expo start -c
+
+# Memeriksa kecocokan versi dependensi dengan Expo SDK 57
+npx expo install --check
 ```
 
 Seluruh perintah yang tersedia:
@@ -225,28 +336,41 @@ Seluruh perintah yang tersedia:
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `npm start`             | Server pengembangan dengan menu pemilihan target                                                                         |
 | `npm run web`           | Menjalankan di peramban                                                                                                  |
-| `npm run android`       | Menjalankan di emulator atau perangkat Android                                                                           |
-| `npm run ios`           | Menjalankan di simulator atau perangkat iOS                                                                              |
+| `npm run android`       | `expo run:android`, build native lokal, butuh Android Studio                                                             |
+| `npm run ios`           | `expo run:ios`, build native lokal, hanya di macOS                                                                       |
 | `npm run lint`          | ESLint                                                                                                                   |
 | `npm run reset-project` | Peninggalan templat `create-expo-app`. **Jangan dijalankan**, perintah ini memindahkan kode aplikasi ke direktori contoh |
 
----
+Sebelum mengirim perubahan, jalankan keduanya, `npm run lint` tidak memeriksa tipe dan `tsc` tidak memeriksa gaya:
 
-## 7. Pemecahan Masalah
-
-| Gejala                                                  | Sebab dan penanganan                                                                                                                                       |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Seluruh layar menampilkan galat jaringan                | `EXPO_PUBLIC_API_URL` salah, backend mati, atau perangkat berada di jaringan berbeda. Buka URL itu di peramban perangkat untuk memastikan terjangkau       |
-| Perubahan `.env` tidak berpengaruh                      | Variabel ditanam saat bundling. Jalankan ulang dengan `npx expo start -c`                                                                                  |
-| Halaman pembayaran menyatakan transaksi tidak ditemukan | Ketidakcocokan mode Midtrans. Lihat [Bagian 3](#3-konfigurasi)                                                                                             |
-| Tombol mikrofon tidak muncul                            | Pengenalan suara tidak tersedia di lingkungan itu. Aplikasi sengaja menyembunyikan tombolnya alih-alih menampilkan galat. Pakai web atau development build |
-| Sesi keluar sendiri terus-menerus                       | Token ditolak backend. Interceptor pada `src/lib/api/client.ts` membuang token dan mengalihkan ke layar masuk setiap kali menerima `401`                   |
-| Peta kosong atau abu-abu                                | Peta memuat Leaflet dari CDN unpkg dan ubin dari OpenStreetMap. Keduanya butuh koneksi internet aktif                                                      |
-| Galat versi Node saat bundling                          | Periksa `node -v` terhadap rentang pada [Bagian 1](#1-prasyarat)                                                                                           |
+```bash
+npm run lint && npx tsc --noEmit
+```
 
 ---
 
-## 8. Fitur Aplikasi
+## 8. Pemecahan Masalah
+
+| Gejala                                                              | Sebab dan penanganan                                                                                                                                                            |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Seluruh layar menampilkan galat jaringan                            | `EXPO_PUBLIC_API_URL` salah, backend mati, atau perangkat di jaringan berbeda. Buka URL itu di peramban perangkat untuk memastikan terjangkau. Lihat [Bagian 4](#4-konfigurasi) |
+| Perubahan `.env` tidak berpengaruh                                  | Variabel ditanam saat bundling. Jalankan ulang dengan `npx expo start -c`                                                                                                       |
+| Galat versi Node saat bundling                                      | Periksa `node -v` terhadap rentang pada [Bagian 2](#2-prasyarat)                                                                                                                |
+| Galat native yang pesannya tidak menunjuk ke mana-mana              | Versi dependensi di luar rentang SDK. Jalankan `npx expo install --check`                                                                                                       |
+| `expo-notifications` melempar galat saat aplikasi dibuka di Android | Anda menjalankannya di Expo Go. Push Android dibuang dari Expo Go sejak SDK 53; pakai development build. Aplikasi sudah menonaktifkan push sendiri di lingkungan itu            |
+| Tombol mikrofon tidak muncul                                        | Pengenalan suara tidak tersedia di lingkungan itu. Aplikasi sengaja menyembunyikan tombolnya alih-alih menampilkan galat. Pakai web atau development build                      |
+| Port 8081 sudah dipakai                                             | Proses Metro lama masih hidup. Tutup, atau jalankan `npx expo start --port 8082`                                                                                                |
+| Ponsel tidak menemukan server Metro                                 | Jaringan memblokir komunikasi antar-perangkat. Sambungkan lewat USB lalu `adb reverse tcp:8081 tcp:8081`                                                                        |
+| Halaman pembayaran menyatakan transaksi tidak ditemukan             | Ketidakcocokan mode Midtrans. Lihat [Bagian 4](#4-konfigurasi)                                                                                                                  |
+| Sesi keluar sendiri terus-menerus                                   | Token ditolak backend. Interceptor pada `src/lib/api/client.ts` membuang token dan mengalihkan ke layar masuk setiap kali menerima `401`                                        |
+| Peta kosong atau abu-abu                                            | Peta memuat Leaflet dari CDN unpkg dan ubin dari OpenStreetMap. Keduanya butuh koneksi internet aktif                                                                           |
+| Konten paling bawah tertutup tombol navigasi HP                     | Layar itu belum memakai `useBottomPad()` atau komponen `BottomBar`. Android menggambar sampai tepi layar (edge-to-edge), tidak ada ruang yang disisakan otomatis                |
+| Build Gradle gagal dengan galat versi Java                          | JDK 17 diperlukan. Periksa `java -version` dan setel `JAVA_HOME`                                                                                                                |
+| Build EAS gagal menyebut lockfile                                   | `package-lock.json` belum ter-commit. Lihat [Bagian 6](#6-membangun-berkas-rilis)                                                                                               |
+
+---
+
+## 9. Fitur Aplikasi
 
 ### Masyarakat
 
@@ -297,7 +421,7 @@ Teks perantara **selalu ditampilkan sebelum dikirim**. Ini keputusan desain, buk
 
 ---
 
-## 9. Arsitektur
+## 10. Arsitektur
 
 ### Tumpukan teknologi
 
@@ -335,7 +459,7 @@ Backend membungkus seluruh respons dalam amplop yang sama:
 
 Interceptor di `src/lib/api/client.ts` membuka amplop ini **sekali, di satu tempat**. Komponen tidak perlu tahu strukturnya. Autentikasi memakai token Sanctum murni lewat header `Authorization: Bearer <token>`, bukan sesi, bukan cookie.
 
-Bila dokumentasi kontrak dan perilaku nyata peladen berselisih, yang benar adalah perilaku peladen, perbaiki dokumennya, jangan menambal di klien.
+Kontrak selengkapnya ada di [`API-DOCS.md`](API-DOCS.md). Bila dokumentasi dan perilaku nyata peladen berselisih, yang benar adalah perilaku peladen, perbaiki dokumennya, jangan menambal di klien.
 
 ### Mengapa Leaflet, bukan react-native-maps
 
@@ -348,11 +472,9 @@ Leaflet di dalam WebView memberi satu implementasi untuk semuanya, dan lebih mud
 API mengembalikan seluruh nilai uang sebagai **integer rupiah**. `12500` berarti Rp 12.500.
 
 ```ts
-formatRupiah(12500)(
-  // "Rp 12.500"   benar
+formatRupiah(12500); // "Rp 12.500"      benar
 
-  12500 / 100,
-).toFixed(2); // salah, jangan pernah
+(12500 / 100).toFixed(2); // salah, jangan pernah
 parseFloat(saldo); // salah, jangan pernah
 ```
 
@@ -360,7 +482,7 @@ Penjumlahan apa pun di sisi klien hanya untuk tampilan sementara. Total yang men
 
 ---
 
-## 10. Struktur Direktori
+## 11. Struktur Direktori
 
 Seluruh kode sumber berada di bawah `src/`. Alias `@/*` menunjuk ke `src/*`, sehingga `@/lib/api` berarti `src/lib/api`. Satu-satunya kekecualian adalah `@/assets/*` yang menunjuk ke `assets/` di akar, karena berkas gambar bukan kode sumber.
 
@@ -403,7 +525,8 @@ src/
     geo.ts                    reverse geocode dengan cadangan Nominatim
     leafletHtml.ts            HTML peta yang disuntikkan ke WebView
     fotoSementara.ts          penyimpan URI foto antar-layar
-    storage.ts push.ts reorder.ts markdown.ts
+    push.ts                   pendaftaran token notifikasi, impor dinamis
+    storage.ts reorder.ts markdown.ts
   types/                      tipe respons API, satu berkas per domain
   constants/                  theme.ts, peta.ts
   context/                    AuthContext.tsx
@@ -411,9 +534,19 @@ src/
 
 Berkas berakhiran `.web.tsx` dan `.native.tsx` dipilih otomatis oleh bundler sesuai platform. Berkas `.d.ts` yang menyertainya menyatukan tipe keduanya agar pemanggil tidak perlu tahu mana yang sedang dipakai.
 
+### Berkas penting di akar
+
+| Berkas                    | Isi                                                                |
+| ------------------------- | ------------------------------------------------------------------ |
+| `app.json`                | Konfigurasi Expo: nama, ikon, plugin, izin, id paket               |
+| `eas.json`                | Profil build EAS beserta variabel lingkungannya                    |
+| `CLAUDE.md`               | Panduan kerja untuk asisten kode, memuat aturan dan jebakan proyek |
+| `API-DOCS.md`             | Kontrak REST API selengkapnya                                      |
+| `KOMPONEN-DAN-LISENSI.md` | Daftar seluruh komponen pihak ketiga beserta lisensinya            |
+
 ---
 
-## 11. Aturan Pengembangan
+## 12. Aturan Pengembangan
 
 Sembilan aturan berikut mengikat seluruh kode di repositori ini:
 
@@ -437,28 +570,33 @@ Hasil debugging nyata di proyek ini. Baca sebelum menulis kode di area terkait.
 - **`Location.reverseGeocodeAsync` mengembalikan larik kosong di web** tanpa Google API key. Cadangan Nominatim di `src/lib/geo.ts` menanganinya.
 - **`Pressable` bersarang menggelembung ke kartu induk di web.** Panggil `e?.stopPropagation?.()`.
 - **Konten tertutup bottom bar.** Selalu pakai `useBottomPad()` beserta komponen `BottomBar`.
+- **Android menggambar sampai tepi layar.** Sejak edge-to-edge diwajibkan, tidak ada ruang yang disisakan otomatis untuk bilah navigasi. Layar dengan elemen tetap di dasar harus menambahkan `useSafeAreaInsets().bottom` sendiri, dan melepasnya saat papan ketik terbuka, kalau tidak muncul celah kosong.
+- **`KeyboardAvoidingView` harus membungkus seluruh isi layar.** Ia menghitung tumpang tindih antara kotaknya sendiri dan papan ketik, dan kotak itu diukur relatif terhadap induk. Dipasang di bawah bilah judul, bantalannya selalu kurang setinggi bilah judul itu.
+- **`expo-notifications` melempar galat saat dimuat di Expo Go pada Android**, bukan sekadar memperingatkan. `src/lib/push.ts` memuatnya secara dinamis dan melewatinya sepenuhnya lewat `isRunningInExpoGo()`.
 
 ### Sebelum menganggap pekerjaan selesai
 
 - Berjalan di web tanpa galat konsol
 - Ada keadaan memuat, galat, dan kosong
-- Konten bawah tidak tertutup bottom bar
+- Konten bawah tidak tertutup bottom bar maupun bilah navigasi HP
 - Elemen interaktif punya `accessibilityLabel`
 - Tidak ada `any` baru
 - Nilai uang diperlakukan sebagai integer rupiah
 - Fitur suara punya jalur alternatif mengetik
+- `npm run lint` dan `npx tsc --noEmit` bersih
 - Sudah dicoba di perangkat fisik, bukan hanya emulator
 
 ---
 
-## 12. Lisensi
+## 13. Lisensi
 
-Kode sumber aplikasi ini adalah karya tim pengembang Resikita dan **belum menetapkan lisensi eksplisit**, `package.json` menyetel `"private": true` tanpa medan `license`.
+Kode sumber aplikasi ini dirilis di bawah **[Lisensi MIT](LICENSE)**, hak cipta © 2026 Tim Resikita.
 
-Berkas `LICENSE` di akar repositori masih merupakan peninggalan templat `create-expo-app` dan memuat hak cipta 650 Industries, bukan hak cipta proyek ini. Berkas itu perlu diganti sebelum publikasi. MIT atau Apache-2.0 adalah pilihan yang paling selaras dengan komponen yang dipakai.
+Lisensi MIT dipilih karena paling selaras dengan komponen yang dipakai: seluruh dependensi berlisensi permisif, MIT, ISC, BSD, dan Apache-2.0, tanpa satu pun lisensi copyleft kuat yang mengikat. Rinciannya, 880 paket beserta lisensi masing-masing, ada di [`KOMPONEN-DAN-LISENSI.md`](KOMPONEN-DAN-LISENSI.md).
 
-Seluruh komponen pihak ketiga yang dipakai berlisensi permisif, MIT, ISC, BSD, dan Apache-2.0, tanpa satu pun lisensi copyleft kuat yang mengikat. Kewajiban atribusi yang tetap harus dipenuhi saat distribusi:
+Kewajiban atribusi yang tetap harus dipenuhi saat mendistribusikan aplikasi:
 
 - Menyertakan teks lisensi beserta pemberitahuan hak cipta untuk komponen MIT, BSD-2-Clause, dan Apache-2.0
 - Menyertakan lisensi SIL Open Font License 1.1 untuk font Plus Jakarta Sans
-- Mencantumkan atribusi OpenStreetMap pada setiap tampilan peta, sudah diterapkan di `src/lib/leafletHtml.ts`
+- Mencantumkan atribusi "© OpenStreetMap contributors" pada setiap tampilan peta, sudah diterapkan di `src/lib/leafletHtml.ts`
+- Mengirim `User-Agent` yang mengidentifikasi aplikasi pada setiap permintaan Nominatim, sudah diterapkan di `src/lib/geo.ts`
