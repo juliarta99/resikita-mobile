@@ -1,169 +1,270 @@
-import { colors, radius, spacing } from "@/constants/theme";
-import { beriUlasan, getPesananDetail } from "@/lib/api";
 import { Feather } from "@expo/vector-icons";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as ImagePicker from "expo-image-picker";
+import { type Href, router, useLocalSearchParams } from "expo-router";
+import { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
+    ActivityIndicator,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const RATING_LABEL = [
+import ErrorState from "@/components/states/ErrorState";
+import LoadingState from "@/components/states/LoadingState";
+import { colors, radius, spacing } from "@/constants/theme";
+import { ApiError } from "@/lib/api/error";
+import { detailPesanan, kirimUlasan } from "@/lib/api/pesanan";
+import { notify } from "@/lib/dialog";
+import { urlMedia } from "@/lib/media";
+
+const LABEL_BINTANG = [
   "",
-  "Sangat Buruk",
-  "Buruk",
+  "Sangat mengecewakan",
+  "Kurang memuaskan",
   "Cukup",
-  "Baik",
-  "Sangat Baik",
+  "Bagus",
+  "Sangat bagus",
 ];
-const MAX = 500;
-type Entry = { rating: number; komentar: string };
 
 export default function BeriUlasan() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // Segmen rutenya `[id]`, tapi nilainya `kode` pesanan.
+  const { id: kode } = useLocalSearchParams<{ id: string }>();
   const qc = useQueryClient();
-  const { data: o, isLoading } = useQuery({
-    queryKey: ["pesanan", id],
-    queryFn: () => getPesananDetail(id),
-    retry: 1,
+
+  const [rating, setRating] = useState(0);
+  const [komentar, setKomentar] = useState("");
+  const [foto, setFoto] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  const q = useQuery({
+    queryKey: ["pesanan", "detail", kode],
+    queryFn: () => detailPesanan(kode),
+    enabled: !!kode,
   });
 
-  const [entries, setEntries] = useState<Record<number, Entry>>({});
-  const [loading, setLoading] = useState(false);
+  const kirim = useMutation({
+    mutationFn: () =>
+      kirimUlasan(
+        kode,
+        { rating, komentar: komentar.trim() || undefined },
+        foto ?? undefined,
+      ),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["pesanan"] });
+      await qc.invalidateQueries({ queryKey: ["produk"] });
+      notify("Terima kasih", "Ulasan Anda sudah terkirim.");
+      router.replace(`/pesanan/${kode}` as Href);
+    },
+    onError: (e: unknown) =>
+      setError(
+        e instanceof ApiError
+          ? e.pesanUntukPengguna
+          : "Ulasan tidak dapat dikirim.",
+      ),
+  });
 
-  // Inisialisasi rating tiap produk (default 5)
-  useEffect(() => {
-    if (!o?.items) return;
-    const init: Record<number, Entry> = {};
-    for (const it of o.items)
-      if (it.product_id) init[it.product_id] = { rating: 5, komentar: "" };
-    setEntries(init);
-  }, [o?.id]);
-
-  const setRating = (pid: number, rating: number) =>
-    setEntries((e) => ({ ...e, [pid]: { ...e[pid], rating } }));
-  const setKomentar = (pid: number, komentar: string) => {
-    if (komentar.length <= MAX)
-      setEntries((e) => ({ ...e, [pid]: { ...e[pid], komentar } }));
-  };
-
-  const kirim = async () => {
-    const ulasan = Object.entries(entries).map(([pid, e]) => ({
-      product_id: Number(pid),
-      rating: e.rating,
-      komentar: e.komentar.trim() || undefined,
-    }));
-    if (ulasan.length === 0) return;
-    setLoading(true);
-    try {
-      await beriUlasan(id, { ulasan });
-      qc.invalidateQueries({ queryKey: ["pesanan"] });
-      Alert.alert("Terima kasih", "Ulasan Anda berhasil dikirim.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
-    } catch (e: any) {
-      Alert.alert(
-        "Gagal",
-        e?.response?.data?.message ?? "Tidak dapat mengirim ulasan.",
-      );
-    } finally {
-      setLoading(false);
+  const ambilFoto = async () => {
+    const izin = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!izin.granted) {
+      notify("Izin ditolak", "Beri izin galeri untuk melampirkan foto.");
+      return;
     }
+    const hasil = await ImagePicker.launchImageLibraryAsync({
+      quality: 0.6,
+      mediaTypes: ["images"],
+    });
+    if (!hasil.canceled && hasil.assets[0]) setFoto(hasil.assets[0].uri);
   };
 
-  if (isLoading)
+  const submit = () => {
+    setError("");
+    if (rating === 0) return setError("Pilih berapa bintang lebih dulu.");
+    kirim.mutate();
+  };
+
+  const appbar = (
+    <View style={styles.appbar}>
+      <Pressable
+        onPress={() => router.back()}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Kembali"
+      >
+        <Feather name="arrow-left" size={24} color={colors.text} />
+      </Pressable>
+      <Text style={styles.appbarTitle}>Beri Ulasan</Text>
+    </View>
+  );
+
+  if (q.isLoading) {
     return (
-      <SafeAreaView style={styles.screen}>
-        <ActivityIndicator color={colors.brand} style={{ marginTop: 60 }} />
+      <SafeAreaView style={styles.screen} edges={["top"]}>
+        {appbar}
+        <LoadingState pesan="Memuat pesanan…" />
       </SafeAreaView>
     );
+  }
 
-  const items = (o?.items ?? []).filter((it: any) => it.product_id);
+  if (q.isError || !q.data) {
+    return (
+      <SafeAreaView style={styles.screen} edges={["top"]}>
+        {appbar}
+        <ErrorState error={q.error} onCobaLagi={() => q.refetch()} />
+      </SafeAreaView>
+    );
+  }
+
+  const p = q.data;
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
-      <View style={styles.appbar}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
-          <Feather name="arrow-left" size={24} color={colors.text} />
-        </Pressable>
-        <Text style={styles.appbarTitle}>Beri Ulasan</Text>
-      </View>
+      {appbar}
 
-      <ScrollView
-        contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40 }}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <Text style={styles.toko}>{o?.umkm}</Text>
-        {items.map((it: any) => {
-          const e = entries[it.product_id] ?? { rating: 5, komentar: "" };
-          return (
-            <View key={it.product_id} style={styles.card}>
-              <View style={styles.prodRow}>
-                <View style={styles.prodIcon}>
-                  <Feather name="shopping-bag" size={18} color={colors.brand} />
+        <ScrollView
+          contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/*
+            Satu ulasan untuk satu pesanan, bukan satu per produk.
+            Itu yang ditetapkan kontrak (`POST /pesanan/{kode}/ulasan` menerima
+            satu `rating` dan satu `komentar`), sementara versi sebelumnya
+            mengirim larik ulasan per produk. Daftar produk di bawah ditampilkan
+            supaya pengguna tahu persis apa yang sedang ia nilai, kalau ternyata
+            penilaian memang harus per produk, layar ini yang berubah, bukan
+            kontraknya yang ditambal di klien. Lihat catatan T6.
+          */}
+          <View style={styles.kartu}>
+            <Text style={styles.kartuJudul}>Anda menilai pesanan</Text>
+            <Text style={styles.kode}>{p.kode}</Text>
+            {/* Kuncinya `item`, bukan `items`, dan fotonya `foto_utama_url`. */}
+            {(p.item ?? []).map((it) => (
+              <View key={it.id} style={styles.item}>
+                <View style={styles.gambar}>
+                  {it.produk?.foto_utama_url ? (
+                    <Image
+                      source={{ uri: urlMedia(it.produk.foto_utama_url) }}
+                      style={styles.gambarIsi}
+                      accessibilityIgnoresInvertColors
+                    />
+                  ) : (
+                    <Feather name="image" size={18} color="#CBD5E1" />
+                  )}
                 </View>
-                <Text style={styles.prodNama} numberOfLines={2}>
+                {/* Nama snapshot saat pesanan dibuat, bukan nama produk hari ini. */}
+                <Text style={styles.itemNama} numberOfLines={2}>
                   {it.nama}
                 </Text>
+                <Text style={styles.itemQty}>×{it.qty}</Text>
               </View>
+            ))}
+          </View>
 
-              <View style={styles.stars}>
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <Pressable
-                    key={n}
-                    onPress={() => setRating(it.product_id, n)}
-                    hitSlop={4}
-                  >
-                    <Feather
-                      name="star"
-                      size={34}
-                      color={n <= e.rating ? "#F59E0B" : "#D8E3DD"}
-                      style={{ marginHorizontal: 3 }}
-                    />
-                  </Pressable>
-                ))}
-              </View>
-              <Text style={styles.ratingLabel}>{RATING_LABEL[e.rating]}</Text>
-
-              <TextInput
-                style={styles.input}
-                value={e.komentar}
-                onChangeText={(t) => setKomentar(it.product_id, t)}
-                placeholder="Tulis ulasan (opsional)..."
-                placeholderTextColor="#9AA5B1"
-                multiline
-              />
-              <Text style={styles.counter}>
-                {e.komentar.length} / {MAX}
-              </Text>
+          <View style={styles.kartu}>
+            <Text style={styles.kartuJudul}>Seberapa puas Anda?</Text>
+            <View style={styles.bintangBaris}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Pressable
+                  key={n}
+                  onPress={() => setRating(n)}
+                  style={styles.bintangTombol}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`${n} bintang, ${LABEL_BINTANG[n]}`}
+                  accessibilityState={{ selected: rating === n }}
+                >
+                  <Feather
+                    name="star"
+                    size={34}
+                    color={n <= rating ? "#F59E0B" : "#E2E8F0"}
+                  />
+                </Pressable>
+              ))}
             </View>
-          );
-        })}
-        {items.length === 0 && (
-          <Text style={styles.empty}>Tidak ada produk untuk diulas.</Text>
-        )}
-      </ScrollView>
+            <Text style={styles.bintangLabel} accessibilityLiveRegion="polite">
+              {rating > 0
+                ? LABEL_BINTANG[rating]
+                : "Ketuk bintang untuk menilai"}
+            </Text>
+          </View>
 
-      <View style={styles.bottom}>
-        <Pressable
-          style={[styles.submit, loading && { opacity: 0.7 }]}
-          onPress={kirim}
-          disabled={loading || items.length === 0}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitText}>Kirim Ulasan</Text>
+          <View style={styles.kartu}>
+            <Text style={styles.kartuJudul}>Ceritakan pengalaman Anda</Text>
+            <TextInput
+              style={styles.komentar}
+              value={komentar}
+              onChangeText={setKomentar}
+              placeholder="Bagaimana kualitas produk dan pengirimannya? (opsional)"
+              placeholderTextColor="#9AA5B1"
+              multiline
+              accessibilityLabel="Komentar ulasan, opsional"
+            />
+
+            {foto ? (
+              <View style={styles.fotoWrap}>
+                <Image
+                  source={{ uri: urlMedia(foto) }}
+                  style={styles.foto}
+                  accessibilityIgnoresInvertColors
+                  accessibilityLabel="Foto yang dilampirkan pada ulasan"
+                />
+                <Pressable
+                  style={styles.fotoHapus}
+                  onPress={() => setFoto(null)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Hapus foto lampiran"
+                >
+                  <Feather name="x" size={14} color={colors.white} />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                style={styles.fotoTambah}
+                onPress={ambilFoto}
+                accessibilityRole="button"
+                accessibilityLabel="Lampirkan foto pada ulasan, opsional"
+              >
+                <Feather name="camera" size={18} color={colors.brand} />
+                <Text style={styles.fotoTambahTeks}>
+                  Lampirkan Foto (opsional)
+                </Text>
+              </Pressable>
+            )}
+          </View>
+
+          {!!error && (
+            <Text style={styles.galat} accessibilityLiveRegion="polite">
+              {error}
+            </Text>
           )}
-        </Pressable>
-      </View>
+
+          <Pressable
+            style={[styles.kirim, kirim.isPending && { opacity: 0.7 }]}
+            onPress={submit}
+            disabled={kirim.isPending}
+            accessibilityRole="button"
+            accessibilityLabel="Kirim ulasan"
+            accessibilityState={{ busy: kirim.isPending }}
+          >
+            {kirim.isPending ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.kirimTeks}>Kirim Ulasan</Text>
+            )}
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -179,70 +280,104 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   appbarTitle: { fontSize: 18, fontWeight: "700", color: colors.text },
-  toko: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.subtext,
-    marginBottom: 12,
-  },
-  card: {
+  kartu: {
     backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: 16,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: 14,
   },
-  prodRow: {
+  kartuJudul: { fontSize: 15, fontWeight: "700", color: colors.text },
+  kode: { fontSize: 12, color: colors.subtext, marginTop: 4, marginBottom: 10 },
+  item: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 12,
+    gap: 10,
+    marginTop: 8,
   },
-  prodIcon: {
+  gambar: {
     width: 40,
     height: 40,
-    borderRadius: 10,
-    backgroundColor: "#EAF7F1",
+    borderRadius: radius.sm,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  gambarIsi: { width: "100%", height: "100%" },
+  itemNama: { flex: 1, fontSize: 13, color: colors.text },
+  itemQty: { fontSize: 12, color: colors.subtext },
+  bintangBaris: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 14,
+  },
+  bintangTombol: {
+    width: 48,
+    height: 48,
     alignItems: "center",
     justifyContent: "center",
   },
-  prodNama: { flex: 1, fontSize: 14, fontWeight: "700", color: colors.text },
-  stars: { flexDirection: "row", justifyContent: "center", marginTop: 4 },
-  ratingLabel: {
+  bintangLabel: {
     textAlign: "center",
-    color: colors.text,
     fontSize: 13,
-    fontWeight: "600",
-    marginTop: 8,
-    marginBottom: 12,
+    color: colors.subtext,
+    marginTop: 6,
   },
-  input: {
+  komentar: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
-    padding: 12,
-    minHeight: 70,
+    padding: 14,
+    minHeight: 110,
+    marginTop: 12,
     color: colors.text,
     textAlignVertical: "top",
   },
-  counter: {
-    color: colors.subtext,
-    fontSize: 12,
-    marginTop: 6,
-    textAlign: "right",
-  },
-  empty: { color: colors.subtext, textAlign: "center", marginTop: 30 },
-  bottom: {
-    backgroundColor: colors.white,
-    padding: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  submit: {
-    backgroundColor: colors.brand,
-    height: 52,
+  fotoTambah: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    minHeight: 48,
     borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.brand,
+    borderStyle: "dashed",
+    marginTop: 12,
+  },
+  fotoTambahTeks: { color: colors.brand, fontWeight: "700", fontSize: 14 },
+  fotoWrap: {
+    width: 120,
+    height: 120,
+    borderRadius: radius.md,
+    overflow: "hidden",
+    marginTop: 12,
+  },
+  foto: { width: "100%", height: "100%" },
+  fotoHapus: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.danger,
     alignItems: "center",
     justifyContent: "center",
   },
-  submitText: { color: colors.white, fontWeight: "700", fontSize: 15 },
+  galat: {
+    color: colors.danger,
+    fontSize: 13,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  kirim: {
+    height: 54,
+    borderRadius: radius.md,
+    backgroundColor: colors.brand,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  kirimTeks: { color: colors.white, fontWeight: "700", fontSize: 15 },
 });

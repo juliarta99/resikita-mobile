@@ -1,5 +1,5 @@
 export const colors = {
-  // Hijau brand (dari palet web Niti Resik)
+  // Hijau brand Resikita
   bg: "#0E7A5C", // latar layar hijau
   brand: "#0A6B4F", // tombol solid / logo
   brandDark: "#065F46",

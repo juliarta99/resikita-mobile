@@ -2,14 +2,14 @@ import { colors, radius, spacing } from "@/constants/theme";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  TextInputProps,
-  View,
-  ViewStyle,
+    ActivityIndicator,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    TextInputProps,
+    View,
+    ViewStyle,
 } from "react-native";
 
 export function Card({
@@ -50,7 +50,7 @@ export function Button({
         ? colors.white
         : "transparent";
   const fg = isSolid ? colors.white : isWhite ? colors.brand : colors.white;
-  const border =
+  const border: ViewStyle | null =
     variant === "outline"
       ? { borderWidth: 1.5, borderColor: colors.white15 }
       : null;
@@ -60,7 +60,7 @@ export function Button({
       style={({ pressed }) => [
         styles.btn,
         { backgroundColor: bg, opacity: pressed ? 0.9 : 1 },
-        border as any,
+        border,
         style,
       ]}
     >
@@ -83,11 +83,59 @@ export function Button({
   );
 }
 
+/**
+ * Pembungkus satu baris formulir: label, isi, dan pesan galatnya.
+ *
+ * Dipakai `Field` di bawah, dan bisa dipakai langsung untuk kontrol yang bukan
+ * `TextInput`, pemilih kategori, pemilih wilayah, daftar kurir. Sebelumnya
+ * kontrol semacam itu tidak punya cara menandai dirinya salah sama sekali,
+ * sehingga galatnya selalu terdampar di pesan umum di atas tombol kirim.
+ */
+export function Bidang({
+  label,
+  required,
+  error,
+  hint,
+  children,
+  style,
+}: {
+  label?: string;
+  required?: boolean;
+  error?: string;
+  hint?: string;
+  children: React.ReactNode;
+  style?: ViewStyle;
+}) {
+  return (
+    <View style={[{ marginBottom: spacing.md }, style]}>
+      {!!label && (
+        <Text style={[styles.label, !!error && { color: colors.danger }]}>
+          {label} {required && <Text style={{ color: colors.danger }}>*</Text>}
+        </Text>
+      )}
+      {children}
+      {!!error ? (
+        <Text
+          style={styles.err}
+          accessibilityLiveRegion="polite"
+          accessibilityRole="alert"
+        >
+          {error}
+        </Text>
+      ) : hint ? (
+        <Text style={styles.hint}>{hint}</Text>
+      ) : null}
+    </View>
+  );
+}
+
 type FieldProps = TextInputProps & {
   label?: string;
   required?: boolean;
   icon?: keyof typeof Feather.glyphMap;
   error?: string;
+  /** Penjelasan kecil di bawah input; disembunyikan saat ada galat. */
+  hint?: string;
   rightIcon?: keyof typeof Feather.glyphMap;
   onRightPress?: () => void;
 };
@@ -96,35 +144,32 @@ export function Field({
   required,
   icon,
   error,
+  hint,
   rightIcon,
   onRightPress,
   style,
   ...rest
 }: FieldProps) {
   return (
-    <View style={{ marginBottom: spacing.md }}>
-      {label && (
-        <Text style={styles.label}>
-          {label} {required && <Text style={{ color: colors.danger }}>*</Text>}
-        </Text>
-      )}
+    <Bidang label={label} required={required} error={error} hint={hint}>
       <View
         style={[
           styles.inputWrap,
-          error ? { borderColor: colors.danger } : null,
+          !!error && { borderColor: colors.danger, backgroundColor: "#FEF2F2" },
         ]}
       >
         {icon && (
           <Feather
             name={icon}
             size={18}
-            color={colors.subtext}
+            color={error ? colors.danger : colors.subtext}
             style={{ marginRight: 8 }}
           />
         )}
         <TextInput
           placeholderTextColor="#9AA5B1"
           style={[styles.input, style]}
+          accessibilityState={{ disabled: rest.editable === false }}
           {...rest}
         />
         {rightIcon && (
@@ -133,7 +178,35 @@ export function Field({
           </Pressable>
         )}
       </View>
-      {!!error && <Text style={styles.err}>{error}</Text>}
+    </Bidang>
+  );
+}
+
+/**
+ * Pesan galat yang tidak menunjuk satu field tertentu.
+ *
+ * Tempatnya di **atas** formulir, bukan menempel di atas tombol kirim: pada
+ * formulir yang panjang, pesan di bawah muncul di luar layar tepat ketika
+ * pengguna menekan tombolnya, dan kegagalannya terasa seperti tombol yang tidak
+ * berfungsi. Yang di sini hanya untuk galat jaringan, `403`, dan pelanggaran
+ * aturan bisnis, galat per field ditempelkan di bawah inputnya sendiri.
+ */
+export function PesanGalat({
+  pesan,
+  style,
+}: {
+  pesan?: string;
+  style?: ViewStyle;
+}) {
+  if (!pesan) return null;
+  return (
+    <View
+      style={[styles.banner, style]}
+      accessibilityLiveRegion="polite"
+      accessibilityRole="alert"
+    >
+      <Feather name="alert-circle" size={16} color={colors.danger} />
+      <Text style={styles.bannerTeks}>{pesan}</Text>
     </View>
   );
 }
@@ -170,5 +243,23 @@ const styles = StyleSheet.create({
     height: 52,
   },
   input: { flex: 1, fontSize: 15, color: colors.text },
-  err: { color: colors.danger, fontSize: 12, marginTop: 4 },
+  err: { color: colors.danger, fontSize: 12, marginTop: 6, lineHeight: 17 },
+  hint: { color: colors.subtext, fontSize: 12, marginTop: 6, lineHeight: 17 },
+  banner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: radius.md,
+    padding: 12,
+    marginBottom: spacing.md,
+  },
+  bannerTeks: {
+    flex: 1,
+    color: "#B91C1C",
+    fontSize: 13,
+    lineHeight: 19,
+  },
 });

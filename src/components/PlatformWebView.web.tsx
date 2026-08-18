@@ -1,8 +1,8 @@
 import React from "react";
-import { View } from "react-native";
+import { View, type StyleProp, type ViewStyle } from "react-native";
 
 // Fallback web: react-native-webview -> <iframe> asli (justru berjalan di browser).
-type Props = { source?: { uri?: string }; style?: any };
+type Props = { source?: { uri?: string }; style?: StyleProp<ViewStyle> };
 
 function WebView({ source, style }: Props) {
   return (

@@ -6,11 +6,12 @@ import * as ImagePicker from "expo-image-picker";
 import { type Href, router } from "expo-router";
 import { useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+    type ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -43,7 +44,7 @@ export default function Kamera() {
     try {
       const photo = await camRef.current?.takePictureAsync({ quality: 0.6 });
       if (photo?.uri) {
-        // URI disimpan di memori — JANGAN dioper lewat params router,
+        // URI disimpan di memori, JANGAN dioper lewat params router,
         // karena akan rusak oleh encode/decode URL (lihat lib/fotoSementara.ts)
         fotoSementara.set(photo.uri);
         router.replace("/klasifikasi/hasil" as Href);
@@ -58,7 +59,7 @@ export default function Kamera() {
     if (!perm.granted) return;
     const res = await ImagePicker.launchImageLibraryAsync({
       quality: 0.6,
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
     });
     if (!res.canceled && res.assets[0]) {
       fotoSementara.set(res.assets[0].uri);
@@ -112,7 +113,7 @@ export default function Kamera() {
 }
 
 function Corner({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
-  const m: any = {
+  const m: Record<typeof pos, ViewStyle> = {
     tl: {
       top: -2,
       left: -2,

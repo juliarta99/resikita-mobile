@@ -1,3 +1,4 @@
+import { notify } from "@/lib/dialog";
 import { colors, radius, spacing } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 import { Feather } from "@expo/vector-icons";
@@ -5,7 +6,6 @@ import * as ImagePicker from "expo-image-picker";
 import { router, type Href } from "expo-router";
 import React from "react";
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -42,12 +42,12 @@ export default function KlasifikasiLanding() {
   const dariGaleri = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Izin ditolak", "Beri izin akses galeri.");
+      notify("Izin ditolak", "Beri izin akses galeri untuk memilih foto.");
       return;
     }
     const res = await ImagePicker.launchImageLibraryAsync({
       quality: 0.7,
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
     });
     if (!res.canceled && res.assets[0])
       router.push({

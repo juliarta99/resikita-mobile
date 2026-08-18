@@ -1,59 +1,95 @@
-import { colors, radius, spacing } from "@/constants/theme";
-import { getKlasifikasiDetail, hapusKlasifikasi } from "@/lib/api";
-import { katColor } from "@/lib/katColor";
 import { Feather } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import KategoriBadge from "@/components/KategoriBadge";
+import ErrorState from "@/components/states/ErrorState";
+import LoadingState from "@/components/states/LoadingState";
+import { colors, radius, spacing } from "@/constants/theme";
+import { detailKlasifikasi, hapusKlasifikasi } from "@/lib/api/klasifikasi";
+import { confirmDialog, notify } from "@/lib/dialog";
+import { formatRupiahOpsional } from "@/lib/rupiah";
+import { urlMedia } from "@/lib/media";
+
 export default function DetailRiwayat() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: c, isLoading } = useQuery({
-    queryKey: ["klasifikasi", id],
-    queryFn: () => getKlasifikasiDetail(id),
+  const nomor = Number(id);
+  const qc = useQueryClient();
+
+  const q = useQuery({
+    queryKey: ["klasifikasi", "detail", nomor],
+    queryFn: () => detailKlasifikasi(nomor),
+    enabled: Number.isFinite(nomor),
   });
 
-  const hapus = () =>
-    Alert.alert("Hapus Riwayat", "Yakin menghapus riwayat ini?", [
-      { text: "Batal", style: "cancel" },
-      {
-        text: "Hapus",
-        style: "destructive",
-        onPress: async () => {
-          await hapusKlasifikasi(id);
-          router.back();
-        },
-      },
-    ]);
+  const hapusMutasi = useMutation({
+    mutationFn: () => hapusKlasifikasi(nomor),
+    onSuccess: async () => {
+      // Riwayat dibatalkan supaya daftar di layar sebelumnya tidak menampilkan
+      // entri yang barusan dihapus saat pengguna kembali ke sana.
+      await qc.invalidateQueries({ queryKey: ["klasifikasi", "riwayat"] });
+      router.back();
+    },
+    onError: () =>
+      notify("Gagal", "Riwayat tidak dapat dihapus. Coba lagi sebentar."),
+  });
 
-  if (isLoading || !c)
+  const hapus = async () => {
+    const yakin = await confirmDialog(
+      "Hapus Riwayat",
+      "Riwayat ini beserta fotonya akan dihapus permanen.",
+      "Hapus",
+    );
+    if (yakin) hapusMutasi.mutate();
+  };
+
+  if (q.isLoading) {
     return (
-      <SafeAreaView style={styles.screen}>
-        <ActivityIndicator color={colors.brand} style={{ marginTop: 60 }} />
+      <SafeAreaView style={styles.screen} edges={["top"]}>
+        <LoadingState pesan="Memuat detail…" />
       </SafeAreaView>
     );
+  }
 
-  const kc = katColor(c.kategori);
-  const tanggal = new Date(c.tanggal).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  const waktu =
-    new Date(c.tanggal).toLocaleTimeString("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }) + " WIB";
+  if (q.isError || !q.data) {
+    return (
+      <SafeAreaView style={styles.screen} edges={["top"]}>
+        <ErrorState error={q.error} onCobaLagi={() => q.refetch()} />
+      </SafeAreaView>
+    );
+  }
+
+  const c = q.data;
+  // `created_at` boleh `null` menurut kontrak API, dan `new Date(null)`
+  // menghasilkan 1 Januari 1970 — tanggal yang tampak sah di layar sehingga
+  // tidak ada yang curiga bahwa timestamp-nya sebenarnya kosong.
+  const dibuat = c.created_at ? new Date(c.created_at) : null;
+  const sah = !!dibuat && !Number.isNaN(dibuat.getTime());
+  const tanggal = sah
+    ? dibuat.toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : "Tidak tercatat";
+  // Tanpa sebutan zona: timestamp dari API adalah UTC, dan `toLocaleTimeString`
+  // sudah menerjemahkannya ke zona perangkat. Menempelkan "WIB" seperti versi
+  // sebelumnya akan salah bagi pengguna di WITA dan WIT.
+  const waktu = sah
+    ? dibuat.toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "--:--";
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
@@ -62,34 +98,54 @@ export default function DetailRiwayat() {
           <Feather name="arrow-left" size={24} color={colors.text} />
         </Pressable>
         <Text style={styles.appbarTitle}>Detail Riwayat</Text>
-        <View style={{ flexDirection: "row", gap: 18 }}>
-          <Feather name="share-2" size={20} color={colors.text} />
-          <Pressable onPress={hapus} hitSlop={8}>
-            <Feather name="trash-2" size={20} color={colors.danger} />
-          </Pressable>
-        </View>
+        {/*
+          Ikon "bagikan" versi sebelumnya tidak terpasang ke aksi apa pun,
+          tombol yang tidak melakukan apa-apa lebih buruk daripada tidak ada
+          tombol. Dihapus sampai ada fitur berbagi yang benar-benar ada.
+        */}
+        <Pressable
+          onPress={hapus}
+          hitSlop={8}
+          disabled={hapusMutasi.isPending}
+          accessibilityRole="button"
+          accessibilityLabel="Hapus riwayat ini"
+          accessibilityState={{ disabled: hapusMutasi.isPending }}
+        >
+          <Feather
+            name="trash-2"
+            size={20}
+            color={hapusMutasi.isPending ? colors.muted : colors.danger}
+          />
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={styles.hero}>
-          {c.foto ? (
-            <Image source={{ uri: c.foto }} style={styles.heroImg} />
+          {c.foto_url ? (
+            <Image
+              source={{ uri: urlMedia(c.foto_url) }}
+              style={styles.heroImg}
+              accessibilityIgnoresInvertColors
+              accessibilityLabel={`Foto ${c.jenis}`}
+            />
           ) : (
             <Feather name="image" size={40} color="#CBD5E1" />
           )}
         </View>
 
         <View style={styles.body}>
-          <View style={[styles.kat, { backgroundColor: "#DCF3EA" }]}>
-            <Text
-              style={{ color: colors.brand, fontWeight: "700", fontSize: 12 }}
-            >
-              {c.kategori_label}
-              {c.material ? " - " + c.material : ""}
-            </Text>
-          </View>
-          <Text style={styles.name}>{c.hasil_jenis}</Text>
-          {!!c.deskripsi && <Text style={styles.desc}>{c.deskripsi}</Text>}
+          {!!c.catatan && (
+            <View style={styles.peringatan}>
+              <Feather name="alert-triangle" size={18} color="#B91C1C" />
+              <Text style={styles.peringatanTeks}>{c.catatan}</Text>
+            </View>
+          )}
+
+          <KategoriBadge kategori={c.kategori} label={c.kategori_label} />
+          <Text style={styles.name}>{c.jenis}</Text>
+          {!!c.kategori_deskripsi && (
+            <Text style={styles.desc}>{c.kategori_deskripsi}</Text>
+          )}
 
           <View style={styles.dtRow}>
             <View style={styles.dtCard}>
@@ -112,9 +168,16 @@ export default function DetailRiwayat() {
             <Text style={styles.cardTitle}>Informasi Klasifikasi</Text>
             <InfoRow
               icon="target"
-              label="Akurasi AI"
-              value={`${c.akurasi_persen}%`}
+              label="Keyakinan AI"
+              value={
+                c.keyakinan_rendah
+                  ? `${Math.round(c.confidence)}%, masih dugaan`
+                  : `${Math.round(c.confidence)}%`
+              }
             />
+            {!!c.material && (
+              <InfoRow icon="layers" label="Material" value={c.material} />
+            )}
             <InfoRow
               icon="refresh-ccw"
               label="Dapat Didaur Ulang"
@@ -122,25 +185,23 @@ export default function DetailRiwayat() {
             />
             <InfoRow
               icon="trending-up"
-              label="Nilai Jual"
-              value={
-                c.nilai_jual > 0
-                  ? `Rp ${Number(c.nilai_jual).toLocaleString("id-ID")}/kg`
-                  : "-"
-              }
+              label="Perkiraan Nilai"
+              value={formatRupiahOpsional(c.estimasi_nilai)}
             />
             <InfoRow
               icon="box"
               label="Estimasi Berat"
-              value={`${c.estimasi_berat} kg`}
+              value={
+                c.estimasi_berat_kg != null ? `${c.estimasi_berat_kg} kg` : "—"
+              }
               last
             />
           </View>
 
-          {(c.langkah_pengolahan ?? []).length > 0 && (
+          {c.langkah_pengolahan.length > 0 && (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Langkah Pengolahan</Text>
-              {c.langkah_pengolahan.map((l: string, i: number) => (
+              {c.langkah_pengolahan.map((l, i) => (
                 <View key={i} style={styles.langkah}>
                   <View style={styles.langkahNum}>
                     <Text style={styles.langkahNumText}>{i + 1}</Text>
@@ -150,10 +211,10 @@ export default function DetailRiwayat() {
               ))}
             </View>
           )}
-          {!!c.rekomendasi && (
+          {!!c.rekomendasi_daur_ulang && (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Rekomendasi Daur Ulang</Text>
-              <Text style={styles.desc}>{c.rekomendasi}</Text>
+              <Text style={styles.desc}>{c.rekomendasi_daur_ulang}</Text>
             </View>
           )}
         </View>
@@ -168,7 +229,7 @@ function InfoRow({
   value,
   last,
 }: {
-  icon: any;
+  icon: keyof typeof Feather.glyphMap;
   label: string;
   value: string;
   last?: boolean;
@@ -186,6 +247,24 @@ function InfoRow({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#EEF3F1" },
+  peringatan: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: radius.md,
+    padding: 14,
+    marginBottom: 14,
+  },
+  peringatanTeks: {
+    flex: 1,
+    color: "#7F1D1D",
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: "600",
+  },
   appbar: {
     flexDirection: "row",
     alignItems: "center",

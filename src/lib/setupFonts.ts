@@ -31,6 +31,10 @@ export function setupFonts() {
   }
 
   // --- NATIVE (Android/iOS): override render <Text> global.
+  // Dua `any` di bawah tidak bisa dihindari: ini menambal properti statis
+  // `render` milik komponen `Text` React Native, yang memang tidak ada di tipe
+  // publiknya. Menuliskan tipe untuk API internal orang lain hanya memindahkan
+  // kebohongan, bukan menghapusnya.
   const TextAny = Text as any;
   const originalRender = TextAny.render;
   if (typeof originalRender !== "function") return;

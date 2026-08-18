@@ -1,15 +1,7 @@
 import { colors, radius, spacing } from "@/constants/theme";
 import { evaluate, Stats } from "@/lib/achievements";
-import {
-  getKlasifikasiRiwayat,
-  getLaporan,
-  getPesanan,
-  getSaldo,
-  getSetoran,
-  getTpsSaya,
-} from "@/lib/api";
+import { useStatistikSaya } from "@/hooks/useStatistikSaya";
 import { Feather } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import {
   ActivityIndicator,
@@ -22,45 +14,23 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Pencapaian() {
-  const saldoQ = useQuery({ queryKey: ["saldo"], queryFn: getSaldo });
-  const setoranQ = useQuery({ queryKey: ["setoran"], queryFn: getSetoran });
-  const pesananQ = useQuery({
-    queryKey: ["pesanan-ringkas"],
-    queryFn: () => getPesanan(),
-  });
-  const laporanQ = useQuery({
-    queryKey: ["laporan-ringkas"],
-    queryFn: () => getLaporan(),
-  });
-  const klasQ = useQuery({
-    queryKey: ["klas-ringkas"],
-    queryFn: () => getKlasifikasiRiwayat(),
-  });
-  const tpsQ = useQuery({
-    queryKey: ["tps-saya-ringkas"],
-    queryFn: getTpsSaya,
-  });
-
-  const asList = (d: any) => (Array.isArray(d) ? d : (d?.data ?? []));
-  const setoranList = asList(setoranQ.data);
-  const totalSetorKg = setoranList.reduce(
-    (n: number, s: any) =>
-      n + Number(s.berat ?? s.berat_kg ?? s.total_berat ?? 0),
-    0,
-  );
+  const stat = useStatistikSaya();
 
   const stats: Stats = {
-    saldo: saldoQ.data ?? 0,
-    totalSetorKg,
-    jumlahSetor: setoranList.length,
-    jumlahBelanja: pesananQ.data?.total ?? asList(pesananQ.data).length,
-    jumlahLaporan: laporanQ.data?.total ?? asList(laporanQ.data).length,
-    jumlahKlasifikasi: asList(klasQ.data).length,
-    jumlahTps: asList(tpsQ.data).length,
+    saldo: stat.saldo,
+    totalSetorKg: stat.totalSetorKg,
+    jumlahSetor: stat.jumlahSetor,
+    jumlahBelanja: stat.jumlahPesanan,
+    jumlahLaporan: stat.jumlahLaporan,
+    jumlahKlasifikasi: stat.jumlahKlasifikasi,
+    // Keanggotaan TPS tidak punya endpoint (catatan T3), jadi pencapaian yang
+    // bergantung padanya tidak akan pernah terbuka sampai endpointnya ada.
+    jumlahTps: 0,
   };
   const list = evaluate(stats);
-  const tercapai = list.filter((a) => a.done).length;
-  const loading = saldoQ.isLoading || setoranQ.isLoading;
+  const tercapai = list.filter((a) => a.done === true).length;
+  const takTerukur = list.filter((a) => a.done === null).length;
+  const loading = stat.memuat;
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
@@ -75,6 +45,7 @@ export default function Pencapaian() {
         <Feather name="award" size={22} color={colors.brand} />
         <Text style={styles.summaryText}>
           {tercapai} dari {list.length} pencapaian terbuka
+          {takTerukur > 0 ? ` · ${takTerukur} belum bisa dinilai` : ""}
         </Text>
       </View>
 
@@ -87,36 +58,65 @@ export default function Pencapaian() {
           {list.map((a) => (
             <View
               key={a.key}
-              style={[styles.card, !a.done && styles.cardLocked]}
+              style={[styles.card, a.done !== true && styles.cardLocked]}
+              accessible
+              accessibilityLabel={`${a.label}: ${
+                a.done === true
+                  ? "terbuka"
+                  : a.done === false
+                    ? "terkunci"
+                    : "belum bisa dinilai"
+              }. ${a.desc}`}
             >
               <View
                 style={[
                   styles.icon,
-                  { backgroundColor: a.done ? "#DCF3EA" : "#E2E8F0" },
+                  { backgroundColor: a.done === true ? "#DCF3EA" : "#E2E8F0" },
                 ]}
               >
                 <Feather
-                  name={(a.done ? a.icon : "lock") as any}
+                  name={
+                    a.done === true
+                      ? (a.icon as keyof typeof Feather.glyphMap)
+                      : a.done === false
+                        ? "lock"
+                        : "help-circle"
+                  }
                   size={22}
-                  color={a.done ? colors.brand : "#94A3B8"}
+                  color={a.done === true ? colors.brand : "#94A3B8"}
                 />
               </View>
               <View style={{ flex: 1 }}>
                 <View style={styles.rowTop}>
-                  <Text style={[styles.title, !a.done && { color: "#64748B" }]}>
+                  <Text
+                    style={[
+                      styles.title,
+                      a.done !== true && { color: "#64748B" },
+                    ]}
+                  >
                     {a.label}
                   </Text>
-                  {a.done ? (
+                  {a.done === true ? (
                     <View style={styles.doneBadge}>
                       <Feather name="check" size={12} color="#fff" />
                       <Text style={styles.doneText}>Terbuka</Text>
                     </View>
                   ) : (
-                    <Feather name="lock" size={14} color="#94A3B8" />
+                    <Feather
+                      name={a.done === false ? "lock" : "help-circle"}
+                      size={14}
+                      color="#94A3B8"
+                    />
                   )}
                 </View>
                 <Text style={styles.desc}>{a.desc}</Text>
                 <Text style={styles.syarat}>Syarat: {a.syarat}</Text>
+                {a.done === null && (
+                  <Text style={styles.syarat}>
+                    Belum bisa dinilai: aplikasi belum menerima total berat
+                    setoran Anda dari peladen.
+                  </Text>
+                )}
               </View>
             </View>
           ))}

@@ -1,9 +1,18 @@
 import { colors } from "@/constants/theme";
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 
 function Dot({ delay }: { delay: number }) {
-  const v = useRef(new Animated.Value(0)).current;
+  /*
+    Disimpan sebagai state berinisialisasi malas, bukan `useRef().current`.
+    Nilainya dibaca saat render — `v.interpolate()` di bawah — dan membaca isi
+    ref saat render adalah hal yang React larang: pada Strict Mode maupun render
+    yang dibatalkan, nilai yang terbaca bisa berasal dari percobaan render yang
+    dibuang. `useState` dengan inisialisasi fungsi memberi objek yang sama
+    stabilnya, tetapi sah dibaca saat render.
+  */
+  const [v] = useState(() => new Animated.Value(0));
+
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -23,7 +32,7 @@ function Dot({ delay }: { delay: number }) {
     );
     loop.start();
     return () => loop.stop();
-  }, []);
+  }, [delay, v]);
   const translateY = v.interpolate({
     inputRange: [0, 1],
     outputRange: [0, -5],

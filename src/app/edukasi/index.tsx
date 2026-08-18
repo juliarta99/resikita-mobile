@@ -1,154 +1,165 @@
-import { colors, radius, spacing } from "@/constants/theme";
-import { getArtikel } from "@/lib/api";
-import { tipeMeta } from "@/lib/tipeMeta";
 import { Feather } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { type Href, router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const CHIPS = [
-  { key: "semua", label: "Semua", icon: "filter" },
-  { key: "artikel", label: "Artikel", icon: "file" },
-  { key: "panduan", label: "Panduan", icon: "book-open" },
-  { key: "tutorial", label: "Tutorial", icon: "video" },
-  { key: "jurnal", label: "Jurnal", icon: "file-text" },
-];
+import LencanaArtikel from "@/components/LencanaArtikel";
+import EmptyState from "@/components/states/EmptyState";
+import ErrorState from "@/components/states/ErrorState";
+import LoadingState from "@/components/states/LoadingState";
+import { colors, radius, spacing } from "@/constants/theme";
+import { useDebounce } from "@/hooks/useDebounce";
+import { daftarArtikel, kategoriArtikel } from "@/lib/api/artikel";
+import { labelTipe, namaKategori } from "@/lib/artikel";
+import type { ArtikelRingkas } from "@/types/artikel";
+import { urlMedia } from "@/lib/media";
 
 export default function Edukasi() {
-  const [chip, setChip] = useState("semua");
-  const [q, setQ] = useState("");
-  const sections = chip === "semua" && !q.trim();
+  const [kategori, setKategori] = useState<string | null>(null);
+  const [cari, setCari] = useState("");
+  const cariTertunda = useDebounce(cari);
 
-  const unggulanQ = useQuery({
-    queryKey: ["edu-unggulan"],
-    queryFn: () => getArtikel({ unggulan: 1 }),
-    enabled: sections,
+  const kategoriQ = useQuery({
+    queryKey: ["artikel", "kategori"],
+    queryFn: kategoriArtikel,
+    staleTime: 30 * 60_000,
   });
-  const populerQ = useQuery({
-    queryKey: ["edu-populer"],
-    queryFn: () => getArtikel({ sort: "populer" }),
-    enabled: sections,
-  });
-  const listQ = useQuery({
-    queryKey: ["edu-list", chip, q],
-    queryFn: () =>
-      getArtikel({
-        tipe: chip === "semua" ? undefined : chip,
-        q: q || undefined,
+
+  const q = useInfiniteQuery({
+    queryKey: ["artikel", "daftar", kategori, cariTertunda],
+    queryFn: ({ pageParam }) =>
+      daftarArtikel({
+        page: pageParam,
+        kategori: kategori ?? undefined,
+        cari: cariTertunda.trim() || undefined,
       }),
-    enabled: !sections,
+    initialPageParam: 1,
+    getNextPageParam: (h) =>
+      h.meta.current_page < h.meta.last_page
+        ? h.meta.current_page + 1
+        : undefined,
   });
 
-  const unggulan = unggulanQ.data?.data ?? [];
-  const populer = populerQ.data?.data ?? [];
-  const list = listQ.data?.data ?? [];
+  const artikel = q.data?.pages.flatMap((h) => h.data) ?? [];
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
-      {/* Header hijau */}
-      <View style={styles.header}>
-        <View style={styles.headRow}>
-          <Pressable onPress={() => router.back()} hitSlop={10}>
-            <Feather name="arrow-left" size={24} color={colors.white} />
-          </Pressable>
-          <Text style={styles.headTitle}>Pusat Edukasi</Text>
-        </View>
-        <View style={styles.searchBox}>
-          <Feather name="search" size={18} color={colors.white70} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Cari artikel, panduan, tutorial..."
-            placeholderTextColor={colors.white70}
-            value={q}
-            onChangeText={setQ}
-          />
-        </View>
+      <View style={styles.appbar}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Kembali"
+        >
+          <Feather name="arrow-left" size={24} color={colors.text} />
+        </Pressable>
+        <Text style={styles.appbarTitle}>Edukasi</Text>
       </View>
 
-      {/* Chips */}
+      <View style={styles.cariWrap}>
+        <Feather name="search" size={18} color={colors.subtext} />
+        <TextInput
+          style={styles.cari}
+          placeholder="Cari artikel…"
+          placeholderTextColor="#9AA5B1"
+          value={cari}
+          onChangeText={setCari}
+          accessibilityLabel="Cari artikel edukasi"
+        />
+      </View>
+
       <View style={styles.chipsWrap}>
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={CHIPS}
-          keyExtractor={(c) => c.key}
-          contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: 10 }}
-          renderItem={({ item }) => (
-            <Pressable
-              style={[styles.chip, chip === item.key && styles.chipActive]}
-              onPress={() => setChip(item.key)}
-            >
-              <Feather
-                name={item.icon as any}
-                size={14}
-                color={chip === item.key ? colors.white : colors.subtext}
-              />
-              <Text
-                style={[
-                  styles.chipText,
-                  chip === item.key && { color: colors.white },
-                ]}
+          data={[null, ...(kategoriQ.data ?? [])]}
+          keyExtractor={(k, i) => k?.slug ?? `semua-${i}`}
+          contentContainerStyle={{ gap: 8, paddingHorizontal: spacing.md }}
+          renderItem={({ item }) => {
+            const slug = item?.slug ?? null;
+            const aktif = kategori === slug;
+            const label = item?.nama ?? "Semua";
+            return (
+              <Pressable
+                style={[styles.chip, aktif && styles.chipAktif]}
+                onPress={() => setKategori(slug)}
+                accessibilityRole="button"
+                accessibilityLabel={`Saring kategori ${label}`}
+                accessibilityState={{ selected: aktif }}
               >
-                {item.label}
-              </Text>
-            </Pressable>
-          )}
+                <Text
+                  style={[styles.chipTeks, aktif && { color: colors.white }]}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          }}
         />
       </View>
 
-      {sections ? (
-        <FlatList
-          data={[
-            {
-              t: "Konten Unggulan",
-              items: unggulan,
-              loading: unggulanQ.isLoading,
-            },
-            {
-              t: "Paling Populer",
-              items: populer,
-              loading: populerQ.isLoading,
-            },
-          ]}
-          keyExtractor={(s) => s.t}
-          contentContainerStyle={{ padding: spacing.lg, paddingBottom: 30 }}
-          renderItem={({ item }) => (
-            <View style={{ marginBottom: 20 }}>
-              <View style={styles.sectionHead}>
-                <Feather name="trending-up" size={16} color={colors.brand} />
-                <Text style={styles.sectionTitle}>{item.t}</Text>
-              </View>
-              {item.loading ? (
-                <ActivityIndicator color={colors.brand} />
-              ) : item.items.length ? (
-                item.items.map((a: any) => <Card key={a.id} a={a} />)
-              ) : (
-                <Text style={styles.empty}>Belum ada konten.</Text>
-              )}
-            </View>
-          )}
-        />
-      ) : listQ.isLoading ? (
-        <ActivityIndicator color={colors.brand} style={{ marginTop: 30 }} />
+      {q.isLoading ? (
+        <LoadingState pesan="Memuat artikel…" />
+      ) : q.isError ? (
+        <ErrorState error={q.error} onCobaLagi={() => q.refetch()} />
       ) : (
         <FlatList
-          data={list}
-          keyExtractor={(a) => String(a.id)}
-          contentContainerStyle={{ padding: spacing.lg, paddingBottom: 30 }}
-          renderItem={({ item }) => <Card a={item} />}
+          data={artikel}
+          keyExtractor={(a) => a.slug}
+          contentContainerStyle={
+            artikel.length === 0
+              ? { flexGrow: 1 }
+              : { padding: spacing.lg, paddingBottom: 30 }
+          }
+          renderItem={({ item }) => <Kartu a={item} />}
+          onEndReachedThreshold={0.4}
+          onEndReached={() => {
+            if (q.hasNextPage && !q.isFetchingNextPage) q.fetchNextPage();
+          }}
+          ListFooterComponent={
+            q.isFetchingNextPage ? (
+              <ActivityIndicator
+                color={colors.brand}
+                style={{ marginVertical: 16 }}
+              />
+            ) : null
+          }
           ListEmptyComponent={
-            <Text style={styles.empty}>Tidak ada konten ditemukan.</Text>
+            <EmptyState
+              icon="book-open"
+              judul={
+                cariTertunda.trim() || kategori
+                  ? "Tidak ada yang cocok"
+                  : "Belum ada artikel"
+              }
+              pesan={
+                cariTertunda.trim() || kategori
+                  ? "Coba kata pencarian lain atau pilih kategori yang berbeda."
+                  : "Artikel edukasi pengelolaan sampah akan muncul di sini."
+              }
+              aksiLabel={
+                cariTertunda.trim() || kategori ? "Tampilkan semua" : undefined
+              }
+              onAksi={
+                cariTertunda.trim() || kategori
+                  ? () => {
+                      setCari("");
+                      setKategori(null);
+                    }
+                  : undefined
+              }
+            />
           }
         />
       )}
@@ -156,40 +167,76 @@ export default function Edukasi() {
   );
 }
 
-function Card({ a }: { a: any }) {
-  const m = tipeMeta(a.tipe);
+/**
+ * Kartu artikel di daftar.
+ *
+ * Bertipe `ArtikelRingkas` mengikuti apa yang benar-benar dikirim
+ * `GET /artikel`: `kategori` berupa nama, dan `konten` maupun `didengarkan`
+ * tidak ikut. Sebelumnya kartu ini dinyatakan sebagai `Artikel`, bentuk
+ * detail, sehingga `kategori?.nama` selalu `undefined` dan lencananya tampil
+ * kosong tanpa satu pun galat.
+ */
+function Kartu({ a }: { a: ArtikelRingkas }) {
+  const kategori = namaKategori(a.kategori);
+  const tipe = labelTipe(a);
+  const menit = a.estimasi_baca_menit;
+
   return (
     <Pressable
-      style={styles.card}
+      style={styles.kartu}
       onPress={() => router.push(`/edukasi/${a.slug}` as Href)}
+      accessibilityRole="button"
+      accessibilityLabel={[
+        a.judul,
+        kategori ? `kategori ${kategori}` : null,
+        tipe,
+        menit ? `${menit} menit baca` : null,
+      ]
+        .filter(Boolean)
+        .join(", ")}
     >
-      <View style={styles.thumb}>
-        {a.thumbnail ? (
-          <Image source={{ uri: a.thumbnail }} style={styles.thumbImg} />
+      <View style={styles.gambar}>
+        {a.thumbnail_url ? (
+          <Image
+            source={{ uri: urlMedia(a.thumbnail_url) }}
+            style={styles.gambarIsi}
+            accessibilityIgnoresInvertColors
+          />
         ) : (
-          <Feather name="image" size={24} color="#CBD5E1" />
+          <Feather name="book-open" size={22} color="#CBD5E1" />
         )}
       </View>
-      <View style={{ flex: 1, justifyContent: "center" }}>
-        <View style={[styles.badge, { backgroundColor: m.bg }]}>
-          <Feather name={m.icon} size={11} color={m.fg} />
-          <Text style={[styles.badgeText, { color: m.fg }]}>{m.label}</Text>
-        </View>
-        <Text style={styles.cardTitle} numberOfLines={2}>
+      <View style={{ flex: 1 }}>
+        <LencanaArtikel a={a} />
+        <Text style={styles.judul} numberOfLines={3}>
           {a.judul}
         </Text>
-        <View style={styles.metaRow}>
-          <Feather name="clock" size={12} color={colors.subtext} />
-          <Text style={styles.meta}>{a.waktu_baca} menit</Text>
-          <Feather
-            name="eye"
-            size={12}
-            color={colors.subtext}
-            style={{ marginLeft: 10 }}
-          />
-          <Text style={styles.meta}>
-            {Number(a.dilihat).toLocaleString("id-ID")}
-          </Text>
+        <View style={styles.metaBaris}>
+          {/* `null` untuk artikel yang belum dihitung peladen; tanpa penjaga
+              ini barisnya berbunyi "null mnt". */}
+          {menit != null && (
+            <View style={styles.meta}>
+              <Feather name="clock" size={12} color={colors.subtext} />
+              <Text style={styles.metaTeks}>{menit} mnt</Text>
+            </View>
+          )}
+          <View style={styles.meta}>
+            <Feather name="eye" size={12} color={colors.subtext} />
+            <Text style={styles.metaTeks}>{a.dilihat}</Text>
+          </View>
+          {/*
+            Penanda unggulan menggantikan jumlah pendengar yang dulu di sini:
+            `didengarkan` hanya ada pada detail artikel (§7.3), jadi angkanya
+            tidak pernah benar-benar tampil di daftar.
+          */}
+          {a.is_unggulan && (
+            <View style={styles.meta}>
+              <Feather name="star" size={12} color={colors.brand} />
+              <Text style={[styles.metaTeks, { color: colors.brand }]}>
+                Pilihan
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </Pressable>
@@ -198,94 +245,69 @@ function Card({ a }: { a: any }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#EEF3F1" },
-  header: {
-    backgroundColor: colors.bg,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: 16,
-    paddingTop: 6,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-  headRow: {
+  appbar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 14,
+    gap: 14,
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
   },
-  headTitle: {
-    flex: 1,
-    color: colors.white,
-    fontSize: 20,
-    fontWeight: "700",
-    marginLeft: 14,
-  },
-  searchBox: {
+  appbarTitle: { fontSize: 18, fontWeight: "700", color: colors.text },
+  cariWrap: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.md,
+    paddingBottom: 12,
+  },
+  cari: {
+    flex: 1,
+    height: 44,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: radius.pill,
     paddingHorizontal: 14,
-    height: 46,
+    color: colors.text,
   },
-  searchInput: { flex: 1, color: colors.white },
-  chipsWrap: { paddingVertical: 14 },
+  chipsWrap: { backgroundColor: colors.white, paddingBottom: 14 },
   chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 16,
-    height: 40,
+    minHeight: 34,
+    justifyContent: "center",
+    paddingHorizontal: 14,
     borderRadius: radius.pill,
-    backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  chipActive: { backgroundColor: colors.brand, borderColor: colors.brand },
-  chipText: { color: colors.subtext, fontWeight: "600", fontSize: 13 },
-  sectionHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
-  sectionTitle: { fontSize: 17, fontWeight: "700", color: colors.text },
-  card: {
+  chipAktif: { backgroundColor: colors.brand, borderColor: colors.brand },
+  chipTeks: { fontSize: 13, color: colors.text, fontWeight: "600" },
+  kartu: {
     flexDirection: "row",
     gap: 12,
     backgroundColor: colors.white,
     borderRadius: radius.md,
-    padding: 10,
+    padding: 12,
     marginBottom: 12,
   },
-  thumb: {
-    width: 96,
-    height: 96,
-    borderRadius: 12,
+  gambar: {
+    width: 92,
+    height: 92,
+    borderRadius: radius.sm,
     backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
-  thumbImg: { width: "100%", height: "100%" },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-    marginBottom: 6,
-  },
-  badgeText: { fontSize: 11, fontWeight: "700" },
-  cardTitle: {
-    fontSize: 15,
+  gambarIsi: { width: "100%", height: "100%" },
+  judul: {
+    fontSize: 14,
     fontWeight: "700",
     color: colors.text,
     lineHeight: 20,
+    marginTop: 6,
   },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 },
-  meta: { fontSize: 12, color: colors.subtext },
-  empty: { color: colors.subtext, textAlign: "center", marginVertical: 10 },
+  metaBaris: { flexDirection: "row", gap: 14, marginTop: 8 },
+  meta: { flexDirection: "row", alignItems: "center", gap: 4 },
+  metaTeks: { fontSize: 11, color: colors.subtext },
 });

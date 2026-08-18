@@ -1,16 +1,12 @@
-import TypingDots from "@/components/TypingDots";
-import { colors, radius, spacing } from "@/constants/theme";
-import { chat, gantiJudulChat, getChatDetail } from "@/lib/api";
 import { Feather } from "@expo/vector-icons";
-import { useQueryClient } from "@tanstack/react-query";
-import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type Href, router, useLocalSearchParams } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -23,557 +19,721 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
-type Msg = { role: "user" | "model"; text: string; at: number };
+import SpeechButton from "@/components/SpeechButton";
+import TypingDots from "@/components/TypingDots";
+import { colors, radius, spacing } from "@/constants/theme";
+import { useSpeech } from "@/hooks/useSpeech";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
+import {
+  detailSesiChat,
+  kirimPesanChat,
+  saranPertanyaan,
+  tandaiDibacakan,
+} from "@/lib/api/chatbot";
+import { ApiError } from "@/lib/api/error";
+import type { PesanChat, SesiChat } from "@/types/chatbot";
+import type { SumberInput } from "@/types/enums";
 
-const GREETING =
-  "Halo! Saya Chatbot Niti Resik. Saya bisa bantu soal pemilahan sampah, daur ulang, kompos, bank sampah, dan tips ramah lingkungan. Ada yang ingin ditanyakan?";
-const greeting = (): Msg => ({ role: "model", text: GREETING, at: Date.now() });
+/**
+ * Pesan yang sudah dikirim pengguna tapi belum dijawab peladen.
+ *
+ * `POST /chatbot/pesan` hanya mengembalikan balasan asisten, pesan pengguna
+ * **sengaja tidak ikut** (§3.10), jadi satu-satunya yang tahu apa yang barusan
+ * dikirim adalah layar ini. Tanpa menyimpannya, gelembung pengguna baru muncul
+ * setelah model selesai berpikir belasan detik, dan selama itu layar tampak
+ * seperti menelan pertanyaannya.
+ */
+type Antrean = { konten: string; sumber: SumberInput };
 
-// Kumpulan pertanyaan pembuka (umum, tanpa berbasis lokasi seperti "TPS/UMKM terdekat")
-const QUESTION_POOL = [
-  "Cara bikin kompos dari sampah rumah?",
-  "Apa itu sampah B3?",
-  "Bagaimana memilah sampah dengan benar?",
-  "Cara mengurangi sampah plastik?",
-  "Apa manfaat daur ulang?",
-  "Bagaimana cara menabung di bank sampah?",
-  "Apa itu ekonomi sirkular?",
-  "Sampah apa saja yang bisa didaur ulang?",
-  "Tips mengurangi sampah makanan?",
-  "Bagaimana mengolah sampah organik?",
-  "Beda sampah organik dan anorganik?",
-  "Cara membuat ecobrick?",
-  "Kenapa memilah sampah itu penting?",
-  "Bagaimana cara daur ulang botol plastik?",
-  "Apa yang termasuk sampah residu?",
+/**
+ * Satu baris di daftar percakapan.
+ *
+ * Tiga bentuk yang berbeda asal-usulnya: pesan yang sudah tersimpan di
+ * peladen, pesan yang masih dalam perjalanan, dan tempat balasan yang sedang
+ * disusun. Menyatukannya sebagai data, bukan sebagai `ListFooterComponent`,
+ * membuat ketiganya ikut aturan gulir yang sama.
+ */
+type Baris =
+  | { jenis: "pesan"; kunci: string; pesan: PesanChat }
+  | { jenis: "antrean"; kunci: string; antrean: Antrean }
+  | { jenis: "menunggu"; kunci: string };
+
+/**
+ * Pemantik cadangan.
+ *
+ * `GET /chatbot/saran-pertanyaan` menyesuaikan wilayah pengguna dan lebih baik
+ * dipakai bila ada. Tapi layar percakapan kosong tanpa satu pun tawaran adalah
+ * kebuntuan yang nyata, pengguna baru sering tidak tahu boleh bertanya apa,
+ * dan justru merekalah yang paling butuh asisten ini. Ketiga pertanyaan di
+ * bawah dipilih karena mewakili tiga hal yang paling sering ditanyakan warga:
+ * memilah, mengolah di rumah, dan menjual.
+ */
+const PEMANTIK_CADANGAN = [
+  "Bagaimana cara memilah sampah rumah tangga?",
+  "Bagaimana membuat kompos dari sisa dapur?",
+  "Sampah apa saja yang laku dijual ke bank sampah?",
 ];
-const pickChips = () =>
-  [...QUESTION_POOL].sort(() => Math.random() - 0.5).slice(0, 4);
 
 export default function Chatbot() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
-  const [convoId, setConvoId] = useState<number | null>(id ? Number(id) : null);
-  const [messages, setMessages] = useState<Msg[]>([greeting()]);
-  const [input, setInput] = useState("");
-  const [typing, setTyping] = useState(false);
-  const [chips, setChips] = useState<string[]>(pickChips);
-  const listRef = useRef<FlatList>(null);
+  const params = useLocalSearchParams<{ sesi?: string }>();
   const qc = useQueryClient();
-  const [renameOpen, setRenameOpen] = useState(false);
-  const [renameText, setRenameText] = useState("");
-  const [savingRename, setSavingRename] = useState(false);
+  const daftarRef = useRef<FlatList<Baris>>(null);
 
-  // Layar ini TIDAK memakai <BottomBar>: bar bawahnya berupa input +
-  // disclaimer yang menyatu dengan latar body, bukan tombol CTA berlatar
-  // putih. Jadi ruang nav bar HP disuntik langsung ke elemen terbawah.
+  const [sesiId, setSesiId] = useState<number | null>(
+    params.sesi ? Number(params.sesi) : null,
+  );
+  const [teks, setTeks] = useState("");
+  const [sumber, setSumber] = useState<SumberInput>("ketik");
+  const [galat, setGalat] = useState("");
+  const [antrean, setAntrean] = useState<Antrean | null>(null);
+
+  /**
+   * Id sementara untuk pesan pengguna yang ditulis ke cache.
+   *
+   * Selalu negatif supaya tidak mungkin bertabrakan dengan id dari peladen,
+   * dan menurun supaya dua pesan beruntun tidak berbagi kunci React yang sama.
+   * Umurnya pendek: pengambilan ulang sesi menggantinya dengan id sebenarnya.
+   */
+  const idSementara = useRef(-1);
+
+  /**
+   * Satu instance `useSpeech()` untuk seluruh layar.
+   *
+   * `expo-speech` hanya punya satu antrean ucapan untuk seluruh aplikasi:
+   * kalau tiap tombol punya instance sendiri, tombol kedua yang berbicara akan
+   * menghentikan yang pertama tanpa yang pertama tahu, ikonnya tertinggal
+   * pada keadaan "sedang membaca" selamanya.
+   */
+  const speech = useSpeech();
+  const suara = useVoiceInput();
+
+  /**
+   * Ruang bawah untuk komposer.
+   *
+   * `SafeAreaView` layar ini sengaja hanya menjaga sisi atas: kalau sisi bawah
+   * ikut dijaga, latar putih komposer berhenti tepat di atas bilah navigasi HP
+   * dan menyisakan pita abu-abu di bawahnya. Ruangnya ditambahkan di dalam
+   * komposer sendiri, sehingga warnanya tetap sampai ke tepi layar sementara
+   * isinya tidak tertimpa tombol navigasi.
+   *
+   * Ruang itu dilepas begitu papan ketik terbuka. Papan ketik menutupi bilah
+   * navigasi, jadi menyisakan tempat untuk sesuatu yang sedang tidak terlihat
+   * hanya melahirkan celah kosong di antara kolom teks dan papan ketik.
+   */
   const insets = useSafeAreaInsets();
-
-  const simpanRename = async () => {
-    if (!convoId || !renameText.trim()) return;
-    setSavingRename(true);
-    try {
-      await gantiJudulChat(convoId, renameText.trim());
-      qc.invalidateQueries({ queryKey: ["chat-riwayat"] });
-      setRenameOpen(false);
-    } catch {
-      Alert.alert("Gagal", "Tidak dapat mengubah judul. Coba lagi.");
-    } finally {
-      setSavingRename(false);
-    }
-  };
+  const [papanKetikTampil, setPapanKetikTampil] = useState(false);
 
   useEffect(() => {
-    if (id)
-      getChatDetail(id)
-        .then((d) => setMessages([greeting(), ...normalizeLoaded(d?.messages)]))
-        .catch(() => {});
-  }, [id]);
-
-  useEffect(() => {
-    const t = setTimeout(
-      () => listRef.current?.scrollToEnd({ animated: true }),
-      80,
+    // iOS mengumumkan papan ketik sebelum animasinya jalan, Android hanya
+    // sesudah; memakai peristiwa yang salah membuat komposer tersentak.
+    const tampil = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => {
+        setPapanKetikTampil(true);
+        // Daftar menyusut saat papan ketik naik, dan yang tersembunyi adalah
+        // pesan terakhir — justru yang sedang dibalas pengguna.
+        daftarRef.current?.scrollToEnd({ animated: true });
+      },
     );
-    return () => clearTimeout(t);
-  }, [messages.length, typing]);
+    const sembunyi = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => setPapanKetikTampil(false),
+    );
+    return () => {
+      tampil.remove();
+      sembunyi.remove();
+    };
+  }, []);
 
-  const send = async (text: string) => {
-    const t = text.trim();
-    if (!t || typing) return;
-    setInput("");
-    setMessages((prev) => [...prev, { role: "user", text: t, at: Date.now() }]);
-    setTyping(true);
-    try {
-      const res = await chat(t, { conversation_id: convoId });
-      if (res.conversation_id) setConvoId(res.conversation_id);
-      setMessages((prev) => [
-        ...prev,
-        { role: "model", text: res.balasan, at: Date.now() },
-      ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "model",
-          text: "Maaf, terjadi gangguan. Silakan coba lagi.",
-          at: Date.now(),
-        },
-      ]);
-    } finally {
-      setTyping(false);
+  const padBawah = papanKetikTampil ? 0 : insets.bottom;
+
+  const sesiQ = useQuery({
+    queryKey: ["chatbot", "sesi", sesiId],
+    queryFn: () => detailSesiChat(sesiId!),
+    enabled: !!sesiId,
+  });
+
+  const saranQ = useQuery({
+    queryKey: ["chatbot", "saran"],
+    queryFn: saranPertanyaan,
+    enabled: !sesiId,
+    staleTime: 10 * 60_000,
+  });
+
+  const pesan: PesanChat[] = sesiQ.data?.pesan ?? [];
+
+  const dibacakan = useMutation({
+    mutationFn: (id: number) => tandaiDibacakan(id),
+  });
+
+  const kirim = useMutation({
+    mutationFn: (a: Antrean) =>
+      kirimPesanChat({
+        pesan: a.konten,
+        sesi_id: sesiId ?? undefined,
+        sumber_input: a.sumber,
+      }),
+    onSuccess: (hasil, a) => {
+      /**
+       * Cache ditulis langsung, tidak sekadar di-invalidate.
+       *
+       * Pada pesan pertama, `setSesiId` membuat `sesiQ` hidup untuk kunci yang
+       * belum pernah terisi, dan sebuah query tanpa data awal berstatus
+       * `isLoading`, yang berarti gelembung pengguna dan balasan yang baru saja
+       * tiba tergantikan spinner kosong tepat di detik jawabannya sampai.
+       * Menanam hasilnya lebih dulu membuat peralihan itu tidak terlihat sama
+       * sekali; pengambilan ulang di bawah tetap berjalan untuk menukar id
+       * sementara dengan id sebenarnya.
+       */
+      const pengguna: PesanChat = {
+        id: idSementara.current--,
+        role: "user",
+        konten: a.konten,
+        sumber_input: a.sumber,
+        dibacakan: false,
+        created_at: null,
+      };
+
+      qc.setQueryData<SesiChat>(["chatbot", "sesi", hasil.sesi_id], (lama) => {
+        const dasar: SesiChat = lama ?? {
+          id: hasil.sesi_id,
+          judul: hasil.judul_sesi,
+          terakhir_at: null,
+          created_at: null,
+        };
+        return {
+          ...dasar,
+          id: hasil.sesi_id,
+          judul: hasil.judul_sesi,
+          pesan: [...(dasar.pesan ?? []), pengguna, hasil.pesan],
+        };
+      });
+
+      setAntrean(null);
+      // Sesi dibuat peladen pada pesan pertama; id-nya baru diketahui sekarang.
+      if (!sesiId) setSesiId(hasil.sesi_id);
+      void qc.invalidateQueries({
+        queryKey: ["chatbot", "sesi", hasil.sesi_id],
+      });
+      void qc.invalidateQueries({ queryKey: ["chatbot", "daftar-sesi"] });
+    },
+    onError: (e: unknown, a) => {
+      /**
+       * Kalimat pengguna dikembalikan ke kolom, tidak dibuang.
+       *
+       * Gagal 503 berarti layanan AI tidak menjawab dan pertanyaannya tidak
+       * ikut tersimpan. Menghapus kalimat pengguna di titik itu berarti ia
+       * harus mendiktekan ulang seluruhnya, dan bagi pengguna yang memakai
+       * suara justru karena kesulitan mengetik, itu kerugian yang nyata.
+       *
+       * Pengembaliannya bersyarat: kalau pengguna sudah mulai mengetik hal
+       * lain selama menunggu, ketikannya yang menang.
+       */
+      setAntrean(null);
+      setTeks((sekarang) => (sekarang.trim() ? sekarang : a.konten));
+      setSumber(a.sumber);
+      setGalat(
+        e instanceof ApiError
+          ? e.layananAiMati
+            ? "Asisten sedang tidak dapat dihubungi. Pesan Anda dikembalikan ke kolom, coba kirim lagi sebentar lagi."
+            : e.pesanUntukPengguna
+          : "Pesan gagal dikirim.",
+      );
+    },
+  });
+
+  const kirimPesan = (isi?: string) => {
+    const konten = (isi ?? teks).trim();
+    if (!konten || kirim.isPending) return;
+    setGalat("");
+
+    // Kolom dikosongkan seketika, sebelum peladen menjawab: itulah yang membuat
+    // pesan terasa benar-benar terkirim. Isinya tidak hilang, `onError`
+    // mengembalikannya utuh bila pengiriman gagal.
+    const a: Antrean = { konten, sumber: isi ? "ketik" : sumber };
+    setAntrean(a);
+    setTeks("");
+    setSumber("ketik");
+    suara.bersihkan();
+    kirim.mutate(a);
+  };
+
+  /*
+    Transkrip suara masuk ke kolom teks, bukan langsung terkirim; pengguna
+    memeriksa dan menyunting lebih dulu. Ini inti arsitektur cascaded §9.
+
+    `useVoiceInput` adalah sistem di luar React — pengenal ucapan peramban atau
+    modul native — yang memuntahkan transkrip sepanjang pengguna berbicara.
+    Menyalurkannya ke state kolom teks memang pekerjaan sebuah efek, dan tidak
+    ada bentuk turunan yang bisa menggantikannya: begitu perekaman berhenti,
+    teksnya harus tetap tinggal di kolom dan bisa disunting.
+
+    Aturan lint di bawah dimatikan pada satu baris ini saja. Menghapus efeknya
+    menuntut `useVoiceInput` mengubah kontraknya menjadi berbasis callback —
+    perubahan yang menyentuh ketiga berkas hook, kedua platform, dan seluruh
+    pemakainya, dan tidak boleh dikerjakan tanpa pengujian di perangkat.
+  */
+  useEffect(() => {
+    if (suara.merekam && suara.teks) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- menyalurkan aliran transkrip dari sistem di luar React
+      setTeks(suara.teks);
+      setSumber("suara");
     }
-  };
+  }, [suara.merekam, suara.teks]);
 
-  const newChat = () => {
-    setMessages([greeting()]);
-    setConvoId(null);
-    setChips(pickChips()); // acak ulang pertanyaan
-  };
+  const baris: Baris[] = [
+    ...pesan.map((p) => ({
+      jenis: "pesan" as const,
+      kunci: `pesan-${p.id}`,
+      pesan: p,
+    })),
+    ...(antrean
+      ? [{ jenis: "antrean" as const, kunci: "antrean", antrean }]
+      : []),
+    ...(kirim.isPending
+      ? [{ jenis: "menunggu" as const, kunci: "menunggu" }]
+      : []),
+  ];
 
-  const showChips = messages.length === 1 && !typing;
+  // Sambutan menyingkir begitu ada yang dikirim, bukan menunggu jawaban tiba.
+  const kosong = !sesiId && pesan.length === 0 && !antrean;
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.push("/")} hitSlop={10}>
-          <Feather name="arrow-left" size={24} color={colors.white} />
-        </Pressable>
-        <View style={styles.botAvatar}>
-          <Feather name="message-circle" size={20} color={colors.white} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.botName}>Chatbot Niti Resik</Text>
-          <Text style={styles.botSub}>Asisten Virtual Anda</Text>
-        </View>
-        {convoId && (
-          <Pressable
-            onPress={() => {
-              setRenameText("");
-              setRenameOpen(true);
-            }}
-            hitSlop={10}
-            style={{ marginRight: 16 }}
-          >
-            <Feather name="edit-2" size={21} color={colors.white} />
-          </Pressable>
-        )}
-        <Pressable
-          onPress={() => router.push("/chatbot/riwayat")}
-          hitSlop={10}
-          style={{ marginRight: 16 }}
-        >
-          <Feather name="clock" size={22} color={colors.white} />
-        </Pressable>
-        <Pressable onPress={newChat} hitSlop={10}>
-          <Feather name="plus" size={24} color={colors.white} />
-        </Pressable>
-      </View>
+      {/*
+        Penghindar papan ketik membungkus **seluruh** isi layar, bilah judul
+        ikut di dalamnya.
 
-      <View style={styles.body}>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={90}
-        >
+        `KeyboardAvoidingView` menghitung tumpang tindih antara kotaknya
+        sendiri dan papan ketik, dan kotak itu diukur relatif terhadap induk.
+        Ketika ia dipasang di bawah bilah judul, sisi bawah kotaknya terbaca
+        setinggi bilah judul lebih tinggi daripada sisi bawah layar yang
+        sebenarnya, sehingga bantalannya selalu kurang — dan kekurangan itulah
+        yang dulu ditambal dengan `keyboardVerticalOffset={80}`, angka yang
+        hanya kebetulan cocok di satu ukuran layar. Sebagai anak langsung
+        SafeAreaView, kotaknya berakhir tepat di dasar layar dan tumpang
+        tindihnya sama persis dengan tinggi papan ketik, tanpa angka ajaib.
+      */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+        <View style={styles.appbar}>
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Kembali"
+          >
+            <Feather name="arrow-left" size={24} color={colors.text} />
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.appbarTitle}>Asisten Resikita</Text>
+            <Text style={styles.appbarSub}>
+              {kirim.isPending ? "Sedang mengetik…" : "Tanya soal sampah"}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => router.push("/chatbot/riwayat" as Href)}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Riwayat percakapan"
+          >
+            <Feather name="clock" size={22} color={colors.text} />
+          </Pressable>
+        </View>
+
+        {kosong ? (
+          <View style={styles.sambutan}>
+            <View style={styles.sambutanIkon}>
+              <Feather name="message-circle" size={30} color={colors.white} />
+            </View>
+            <Text style={styles.sambutanJudul}>Ada yang ingin ditanyakan?</Text>
+            <Text style={styles.sambutanTeks}>
+              Tanyakan apa saja soal memilah sampah, kompos, bank sampah, atau
+              daur ulang. Anda bisa mengetik atau berbicara.
+            </Text>
+
+            {/*
+              Pemantik dari peladen bila ada; kalau tidak, yang lokal.
+              Tidak pernah kosong, itu intinya.
+            */}
+            {(() => {
+              const pemantik = (saranQ.data ?? []).length
+                ? (saranQ.data ?? [])
+                : PEMANTIK_CADANGAN;
+              return (
+                <View style={styles.saranWrap}>
+                  {pemantik.slice(0, 3).map((s) => (
+                    <Pressable
+                      key={s}
+                      style={styles.saran}
+                      onPress={() => kirimPesan(s)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Tanyakan: ${s}`}
+                    >
+                      <Feather
+                        name="message-square"
+                        size={15}
+                        color={colors.brand}
+                      />
+                      <Text style={styles.saranTeks}>{s}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              );
+            })()}
+          </View>
+        ) : sesiQ.isLoading && !antrean ? (
+          <View style={styles.tengah}>
+            <ActivityIndicator color={colors.brand} />
+          </View>
+        ) : (
           <FlatList
-            ref={listRef}
-            data={messages}
-            keyExtractor={(_, i) => String(i)}
-            contentContainerStyle={{ padding: spacing.md, paddingBottom: 8 }}
-            renderItem={({ item }) => <Bubble msg={item} />}
-            ListFooterComponent={
-              <>
-                {typing && (
-                  <View style={{ marginLeft: 40, marginTop: 4 }}>
+            ref={daftarRef}
+            data={baris}
+            keyExtractor={(b) => b.kunci}
+            contentContainerStyle={{ padding: spacing.md, gap: 12 }}
+            // Tanpa ini, ketukan pertama saat papan ketik terbuka hanya menutup
+            // papan ketik. Tombol dengar pada balasan jadi menuntut dua
+            // ketukan, dan yang pertama tidak memberi umpan balik apa pun.
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => {
+              if (item.jenis === "antrean") {
+                return <GelembungAntrean antrean={item.antrean} />;
+              }
+              if (item.jenis === "menunggu") {
+                return (
+                  <View
+                    style={styles.mengetik}
+                    accessibilityLiveRegion="polite"
+                    accessibilityLabel="Asisten sedang menyusun jawaban"
+                  >
                     <TypingDots />
                   </View>
-                )}
-                {showChips && (
-                  <View style={styles.chips}>
-                    {chips.map((c) => (
-                      <Pressable
-                        key={c}
-                        style={styles.chip}
-                        onPress={() => send(c)}
-                      >
-                        <Text style={styles.chipText}>{c}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
-              </>
+                );
+              }
+              const p = item.pesan;
+              return (
+                <Gelembung
+                  p={p}
+                  speech={speech}
+                  onSelesaiDibacakan={() => {
+                    if (!p.dibacakan) dibacakan.mutate(p.id);
+                  }}
+                />
+              );
+            }}
+            onContentSizeChange={() =>
+              daftarRef.current?.scrollToEnd({ animated: true })
             }
           />
+        )}
 
-          {/* Input bar — hanya teks (tanpa voice) */}
-          <View style={styles.inputBar}>
+        {!!galat && (
+          <Text style={styles.galat} accessibilityLiveRegion="polite">
+            {galat}
+          </Text>
+        )}
+
+        {/*
+          Komposer dan galat suara berbagi satu wadah supaya keduanya berada di
+          atas bilah navigasi. Sebelumnya galat suara tersusun setelah komposer
+          dan ikut tenggelam ke tepi layar.
+        */}
+        <View style={[styles.footer, { paddingBottom: padBawah }]}>
+          <View style={styles.komposer}>
             <TextInput
               style={styles.input}
-              placeholder="Ketik pertanyaan Anda..."
+              value={teks}
+              onChangeText={(v) => {
+                setTeks(v);
+                if (!v.trim() && sumber === "suara") setSumber("ketik");
+              }}
+              placeholder={
+                suara.merekam ? "Mendengarkan…" : "Tulis pertanyaan Anda…"
+              }
               placeholderTextColor="#9AA5B1"
-              value={input}
-              onChangeText={setInput}
-              onSubmitEditing={() => send(input)}
-              returnKeyType="send"
               multiline
+              editable={!suara.merekam}
+              accessibilityLabel="Pertanyaan untuk asisten"
             />
+
+            {suara.didukung && (
+              <Pressable
+                style={[styles.mic, suara.merekam && styles.micAktif]}
+                onPress={() =>
+                  suara.merekam ? suara.berhenti() : suara.mulai()
+                }
+                accessibilityRole="button"
+                accessibilityLabel={
+                  suara.merekam
+                    ? "Berhenti merekam"
+                    : "Diktekan pertanyaan dengan suara"
+                }
+                accessibilityHint={
+                  suara.merekam
+                    ? undefined
+                    : "Ucapan Anda muncul di kolom teks dan bisa disunting sebelum dikirim"
+                }
+                accessibilityState={{ busy: suara.merekam }}
+              >
+                <Feather
+                  name={suara.merekam ? "square" : "mic"}
+                  size={18}
+                  color={suara.merekam ? colors.white : colors.brand}
+                />
+              </Pressable>
+            )}
+
             <Pressable
               style={[
-                styles.send,
-                (!input.trim() || typing) && { opacity: 0.5 },
+                styles.kirim,
+                (!teks.trim() || kirim.isPending) && styles.kirimMati,
               ]}
-              onPress={() => send(input)}
-              // dulu hanya tampak redup tapi tetap bisa ditekan
-              disabled={!input.trim() || typing}
+              onPress={() => kirimPesan()}
+              disabled={!teks.trim() || kirim.isPending}
+              accessibilityRole="button"
+              accessibilityLabel="Kirim pertanyaan"
+              accessibilityState={{
+                disabled: !teks.trim() || kirim.isPending,
+                busy: kirim.isPending,
+              }}
             >
               <Feather name="send" size={18} color={colors.white} />
             </Pressable>
           </View>
 
-          {/* Elemen terbawah: padding bawah = 8 + tinggi nav bar HP */}
-          <Text
-            style={[styles.disclaimer, { paddingBottom: 8 + insets.bottom }]}
-          >
-            Chatbot dapat memberikan informasi yang tidak akurat. Verifikasi
-            jawaban penting.
-          </Text>
-        </KeyboardAvoidingView>
-      </View>
-
-      {/* Modal ubah judul percakapan */}
-      <Modal
-        visible={renameOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setRenameOpen(false)}
-      >
-        <Pressable style={styles.backdrop} onPress={() => setRenameOpen(false)}>
-          <Pressable style={styles.modal} onPress={() => {}}>
-            <Text style={styles.modalTitle}>Ubah Judul</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={renameText}
-              onChangeText={setRenameText}
-              placeholder="Judul percakapan"
-              placeholderTextColor="#9AA5B1"
-              autoFocus
-              maxLength={100}
-            />
-            <View style={styles.modalBtns}>
-              <Pressable
-                style={[styles.modalBtn, styles.modalCancel]}
-                onPress={() => setRenameOpen(false)}
-              >
-                <Text style={styles.modalCancelText}>Batal</Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.modalBtn,
-                  styles.modalSave,
-                  (!renameText.trim() || savingRename) && { opacity: 0.6 },
-                ]}
-                onPress={simpanRename}
-                disabled={!renameText.trim() || savingRename}
-              >
-                {savingRename ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.modalSaveText}>Simpan</Text>
-                )}
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          {!!suara.galat && (
+            <Text style={styles.galatSuara} accessibilityLiveRegion="polite">
+              {suara.galat}
+            </Text>
+          )}
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-// Rapikan pesan tersimpan (data lama bisa tak punya `at` valid / text kosong / role beda)
-function normalizeLoaded(raw: any): Msg[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter((m) => m && typeof m === "object")
-    .map((m: any): Msg => {
-      const role: "user" | "model" = m.role === "user" ? "user" : "model";
-      const text = String(m.text ?? m.content ?? m.message ?? "").trim();
-      let at = Number(m.at ?? m.timestamp ?? m.created_at);
-      if (!Number.isFinite(at)) at = NaN;
-      else if (at > 0 && at < 1e12) at = at * 1000; // detik -> ms
-      return { role, text, at };
-    })
-    .filter((m) => m.text.length > 0);
+/**
+ * Gelembung pesan pengguna yang belum sampai ke peladen.
+ *
+ * Rupanya sengaja sama persis dengan gelembung yang sudah terkirim, hanya
+ * sedikit lebih pudar dan berpenanda jam. Yang perlu diyakinkan pengguna
+ * adalah kalimatnya sudah berangkat, bukan bahwa sistemnya sedang sibuk;
+ * itu tugas titik-titik di bawahnya.
+ */
+function GelembungAntrean({ antrean }: { antrean: Antrean }) {
+  const didiktekan = antrean.sumber === "suara";
+  return (
+    <View
+      style={[styles.gelembungWrap, styles.kanan]}
+      accessible
+      accessibilityLabel={`Pesan Anda: ${antrean.konten}. Sedang dikirim.`}
+    >
+      <View
+        style={[
+          styles.gelembung,
+          styles.gelembungUser,
+          styles.gelembungAntrean,
+        ]}
+      >
+        <Text style={[styles.pesanTeks, { color: colors.white }]}>
+          {antrean.konten}
+        </Text>
+        <View style={styles.tandaSuara}>
+          <Feather
+            name={didiktekan ? "mic" : "clock"}
+            size={11}
+            color={colors.white70}
+          />
+          <Text style={styles.tandaSuaraTeks}>
+            {didiktekan ? "didiktekan · mengirim" : "mengirim"}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
 }
 
-function Bubble({ msg }: { msg: Msg }) {
-  const isUser = msg.role === "user";
-  const time = Number.isFinite(msg.at)
-    ? new Date(msg.at).toLocaleTimeString("id-ID", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "";
+function Gelembung({
+  p,
+  speech,
+  onSelesaiDibacakan,
+}: {
+  p: PesanChat;
+  speech: ReturnType<typeof useSpeech>;
+  onSelesaiDibacakan: () => void;
+}) {
+  const dariPengguna = p.role === "user";
+
   return (
-    <View style={[styles.msgRow, isUser && { justifyContent: "flex-end" }]}>
-      {!isUser && (
-        <View style={styles.smallBot}>
-          <Feather name="message-circle" size={16} color={colors.white} />
-        </View>
-      )}
-      <View style={{ maxWidth: "80%" }}>
-        <View
-          style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleBot]}
+    <View
+      style={[styles.gelembungWrap, dariPengguna ? styles.kanan : styles.kiri]}
+    >
+      <View
+        style={[
+          styles.gelembung,
+          dariPengguna ? styles.gelembungUser : styles.gelembungModel,
+        ]}
+      >
+        <Text
+          style={[styles.pesanTeks, dariPengguna && { color: colors.white }]}
         >
-          {isUser ? (
-            <Text style={[styles.bubbleText, { color: colors.white }]}>
-              {msg.text}
-            </Text>
-          ) : (
-            <FormattedText text={msg.text} />
-          )}
-        </View>
-        {time !== "" && (
-          <Text style={[styles.time, isUser && { textAlign: "right" }]}>
-            {time}
-          </Text>
+          {p.konten}
+        </Text>
+
+        {dariPengguna && p.sumber_input === "suara" && (
+          <View style={styles.tandaSuara}>
+            <Feather name="mic" size={11} color={colors.white70} />
+            <Text style={styles.tandaSuaraTeks}>didiktekan</Text>
+          </View>
         )}
       </View>
-      {isUser && (
-        <View style={styles.smallUser}>
-          <Feather name="user" size={16} color={colors.subtext} />
-        </View>
+
+      {/*
+        Tombol dengar hanya pada balasan asisten. Jawabannya sudah disiapkan
+        peladen tanpa judul markdown, tabel, atau blok kode, jadi bisa langsung
+        dilempar ke TTS tanpa pembersihan tambahan.
+      */}
+      {!dariPengguna && (
+        <SpeechButton
+          teks={p.konten}
+          speech={speech}
+          ukuran="kecil"
+          onSelesaiDibacakan={onSelesaiDibacakan}
+        />
       )}
     </View>
   );
 }
 
-/* ---------- Perapi balasan: bullet / nomor / tebal, buang artefak markdown ---------- */
-function inlineBold(text: string, keyPrefix: string) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
-  return parts.map((p, i) => {
-    const m = p.match(/^\*\*([^*]+)\*\*$/);
-    return m ? (
-      <Text key={keyPrefix + i} style={styles.bold}>
-        {m[1]}
-      </Text>
-    ) : (
-      <Text key={keyPrefix + i}>{p}</Text>
-    );
-  });
-}
-
-function FormattedText({ text }: { text: string }) {
-  const clean = (text || "")
-    .replace(/\r/g, "")
-    .replace(/^#{1,6}\s*/gm, "") // buang heading markdown (#)
-    .replace(/`{1,3}/g, "") // buang backtick kode
-    .replace(/\n{3,}/g, "\n\n") // rapikan baris kosong berlebih
-    .trim();
-
-  const lines = clean.split("\n");
-  const nodes: React.ReactNode[] = [];
-
-  lines.forEach((raw, idx) => {
-    const line = raw.trim();
-    if (!line) {
-      nodes.push(<View key={"sp" + idx} style={{ height: 6 }} />);
-      return;
-    }
-    const bullet = line.match(/^[-*•]\s+(.*)$/);
-    const numbered = line.match(/^(\d+)[.)]\s+(.*)$/);
-
-    if (bullet) {
-      nodes.push(
-        <View key={idx} style={styles.liRow}>
-          <Text style={styles.liDot}>•</Text>
-          <Text style={styles.liText}>{inlineBold(bullet[1], idx + "-")}</Text>
-        </View>,
-      );
-    } else if (numbered) {
-      nodes.push(
-        <View key={idx} style={styles.liRow}>
-          <Text style={styles.liNum}>{numbered[1]}.</Text>
-          <Text style={styles.liText}>
-            {inlineBold(numbered[2], idx + "-")}
-          </Text>
-        </View>,
-      );
-    } else {
-      nodes.push(
-        <Text key={idx} style={styles.para}>
-          {inlineBold(line, idx + "-")}
-        </Text>,
-      );
-    }
-  });
-
-  return <View>{nodes}</View>;
-}
-
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  header: {
+  screen: { flex: 1, backgroundColor: "#EEF3F1" },
+  appbar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 14,
+    backgroundColor: colors.white,
     paddingHorizontal: spacing.md,
-    paddingBottom: 14,
+    paddingVertical: 12,
   },
-  botAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.white15,
+  appbarTitle: { fontSize: 16, fontWeight: "700", color: colors.text },
+  appbarSub: { fontSize: 12, color: colors.subtext, marginTop: 1 },
+  tengah: { flex: 1, alignItems: "center", justifyContent: "center" },
+  sambutan: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    padding: spacing.xl,
+    gap: 10,
   },
-  botName: { color: colors.white, fontSize: 17, fontWeight: "700" },
-  botSub: { color: colors.white70, fontSize: 12 },
-  body: {
-    flex: 1,
-    backgroundColor: "#EEF3F1",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: "hidden",
-  },
-  msgRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 8,
-    marginBottom: 14,
-  },
-  smallBot: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  sambutanIkon: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 6,
   },
-  smallUser: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#E2E8F0",
+  sambutanJudul: { fontSize: 17, fontWeight: "700", color: colors.text },
+  sambutanTeks: {
+    fontSize: 13,
+    color: colors.subtext,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  saranWrap: { gap: 8, marginTop: 16, alignSelf: "stretch" },
+  saran: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-  },
-  bubble: { padding: 14, borderRadius: 16 },
-  bubbleBot: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 4,
+    gap: 10,
+    minHeight: 44,
+    justifyContent: "flex-start",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-  },
-  bubbleUser: { backgroundColor: colors.brand, borderTopRightRadius: 4 },
-  bubbleText: { fontSize: 14, lineHeight: 20, color: colors.text },
-  para: { fontSize: 14, lineHeight: 21, color: colors.text, marginBottom: 2 },
-  bold: { fontWeight: "700", color: colors.text },
-  liRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginVertical: 2,
-    alignItems: "flex-start",
-  },
-  liDot: { color: colors.brand, fontSize: 15, lineHeight: 21 },
-  liNum: {
-    color: colors.brand,
-    fontWeight: "700",
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  liText: { flex: 1, fontSize: 14, lineHeight: 21, color: colors.text },
-  time: { fontSize: 11, color: "#94A3B8", marginTop: 4, marginHorizontal: 4 },
-  chips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginLeft: 40,
-    marginTop: 4,
-  },
-  chip: {
-    borderWidth: 1,
-    borderColor: "#BFE3D5",
     backgroundColor: colors.white,
-    borderRadius: radius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
   },
-  chipText: { color: colors.brand, fontSize: 13, fontWeight: "500" },
-  inputBar: {
+  saranTeks: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 19 },
+  gelembungWrap: { maxWidth: "88%", gap: 6 },
+  kiri: { alignSelf: "flex-start", alignItems: "flex-start" },
+  kanan: { alignSelf: "flex-end", alignItems: "flex-end" },
+  gelembung: { borderRadius: radius.lg, padding: 14 },
+  gelembungUser: { backgroundColor: colors.brand, borderBottomRightRadius: 4 },
+  gelembungModel: { backgroundColor: colors.white, borderBottomLeftRadius: 4 },
+  // Cukup pudar untuk terbaca sebagai "belum tuntas", masih jauh di atas
+  // ambang kontras WCAG untuk teks putih di atas warna merek.
+  gelembungAntrean: { opacity: 0.85 },
+  pesanTeks: { fontSize: 14, color: colors.text, lineHeight: 21 },
+  tandaSuara: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 6,
+  },
+  tandaSuaraTeks: { fontSize: 10, color: colors.white70 },
+  mengetik: { alignSelf: "flex-start", marginTop: 4 },
+  galat: {
+    color: colors.danger,
+    fontSize: 12,
+    paddingHorizontal: spacing.md,
+    paddingBottom: 6,
+    lineHeight: 17,
+  },
+  galatSuara: {
+    color: colors.danger,
+    fontSize: 12,
+    paddingHorizontal: spacing.md,
+    paddingBottom: 8,
+  },
+  /*
+    Latar dan garis pemisah ada di wadah luar, bukan di baris komposer, supaya
+    putihnya ikut menutupi ruang bilah navigasi di bawahnya. Kalau ditaruh di
+    baris komposer, ruang itu memperlihatkan latar layar dan komposer tampak
+    melayang di atas pita abu-abu.
+  */
+  footer: {
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  komposer: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 10,
+    gap: 8,
     paddingHorizontal: spacing.md,
-    paddingTop: 8,
+    paddingVertical: 10,
   },
   input: {
     flex: 1,
-    minHeight: 46,
+    minHeight: 44,
     maxHeight: 120,
-    backgroundColor: colors.white,
-    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.border,
+    borderRadius: radius.lg,
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingVertical: 12,
     color: colors.text,
+    fontSize: 14,
   },
-  send: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+  mic: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.brand,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  micAktif: { backgroundColor: colors.danger, borderColor: colors.danger },
+  kirim: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
   },
-  disclaimer: {
-    textAlign: "center",
-    color: colors.subtext,
-    fontSize: 11,
-    paddingTop: 8,
-    // paddingBottom disuntik dari insets di komponen
-    paddingHorizontal: 20,
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 30,
-  },
-  modal: {
-    width: "100%",
-    maxWidth: 420,
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: 14,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: 14,
-    height: 48,
-    color: colors.text,
-  },
-  modalBtns: { flexDirection: "row", gap: 12, marginTop: 18 },
-  modalBtn: {
-    flex: 1,
-    height: 46,
-    borderRadius: radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalCancel: { backgroundColor: "#F1F5F9" },
-  modalCancelText: { color: colors.text, fontWeight: "700" },
-  modalSave: { backgroundColor: colors.brand },
-  modalSaveText: { color: "#fff", fontWeight: "700" },
+  kirimMati: { backgroundColor: colors.muted },
 });

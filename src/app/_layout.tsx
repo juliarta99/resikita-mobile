@@ -9,7 +9,9 @@ import {
   PlusJakartaSans_800ExtraBold,
   useFonts,
 } from "@expo-google-fonts/plus-jakarta-sans";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { siapkanPenangananNotifikasi } from "@/lib/push";
+import { queryClient } from "@/lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -21,12 +23,6 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 // Web: inject Google Fonts + CSS (tanpa fontfaceobserver).
 setupFonts();
 SplashScreen.preventAutoHideAsync().catch(() => {});
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: 1, refetchOnWindowFocus: false },
-  },
-});
 
 function Gate({ children }: { children: React.ReactNode }) {
   const { loading } = useAuth();
@@ -55,6 +51,8 @@ export default function RootLayout() {
   useEffect(() => {
     if (ready) SplashScreen.hideAsync().catch(() => {});
   }, [ready]);
+
+  useEffect(() => siapkanPenangananNotifikasi(), []);
 
   if (!ready) return <Splash />;
 

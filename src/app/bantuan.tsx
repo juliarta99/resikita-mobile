@@ -10,9 +10,9 @@ const FAQ: { grup: string; items: QA[] }[] = [
   {
     grup: "Umum",
     items: [
-      { q: "Apa itu Niti Resik?", a: "Niti Resik adalah platform ekonomi sirkular pengelolaan sampah untuk Kabupaten Badung, Bali. Kamu bisa memilah sampah, menyetor ke Bank Sampah untuk mendapat saldo, memakai Klasifikasi AI, hingga melaporkan masalah sampah di sekitarmu." },
-      { q: "Bagaimana cara mendaftar?", a: "Buka halaman Daftar, isi nama, NIK, nomor telepon, dan data diri, lalu verifikasi lewat kode OTP yang dikirim ke nomormu. Setelah aktif, kamu langsung memperoleh ID Nasabah." },
-      { q: "Apakah aplikasi ini gratis?", a: "Ya. Seluruh fitur inti Niti Resik gratis untuk warga. Tidak ada biaya pendaftaran maupun biaya administrasi penarikan saldo." },
+      { q: "Apa itu Resikita?", a: "Resikita adalah platform ekonomi sirkular pengelolaan sampah. Kamu bisa memilah sampah, menyetor ke Bank Sampah untuk mendapat saldo, memakai Klasifikasi AI, hingga melaporkan masalah sampah di sekitarmu." },
+      { q: "Bagaimana cara mendaftar?", a: "Buka halaman Daftar, isi nama dan email, lalu buat kata sandi. Nomor WhatsApp dan domisili bersifat opsional dan bisa dilengkapi kapan saja lewat menu Profil. Setelah akun aktif, kamu langsung memperoleh ID Nasabah." },
+      { q: "Apakah aplikasi ini gratis?", a: "Ya. Seluruh fitur inti Resikita gratis untuk warga. Tidak ada biaya pendaftaran maupun biaya administrasi penarikan saldo." },
     ],
   },
   {
@@ -26,7 +26,7 @@ const FAQ: { grup: string; items: QA[] }[] = [
   {
     grup: "Klasifikasi AI",
     items: [
-      { q: "Apa itu Klasifikasi AI?", a: "Fitur untuk memindai foto sampah dan mengetahui jenis, kategori (organik/anorganik/B3/residu), serta cara pengolahan yang disarankan." },
+      { q: "Apa itu Klasifikasi AI?", a: "Fitur untuk memindai foto sampah dan mengetahui jenis, kategori (organik, anorganik, B3, residu, elektronik), serta cara pengolahan yang disarankan." },
       { q: "Apakah hasil AI selalu akurat?", a: "Tidak selalu. Hasil bersifat bantuan; pastikan foto jelas dan terang. Bila ragu, ikuti panduan pemilahan atau tanyakan ke petugas bank sampah." },
     ],
   },

@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "Niti Resik",
+    "name": "Resikita",
     "slug": "niti-resik-masyarakat",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "nitiresikmasyarakat",
+    "scheme": "resikita",
     "userInterfaceStyle": "light",
     "android": {
-      "package": "com.juliarta99.nitiresik",
+      "package": "com.juliarta99.resikita",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#057D5D",
@@ -34,7 +34,23 @@
       "expo-secure-store",
       "expo-status-bar",
       "@react-native-community/datetimepicker",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "color": "#057D5D",
+          "defaultChannel": "default"
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Resikita memakai mikrofon agar Anda bisa mendiktekan laporan dan pertanyaan tanpa mengetik.",
+          "speechRecognitionPermission": "Ucapan Anda diubah menjadi teks, ditampilkan lebih dulu untuk Anda periksa, baru dikirim."
+        }
+      ],
+      "expo-image",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

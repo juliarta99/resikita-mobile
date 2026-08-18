@@ -1,208 +1,303 @@
-import { colors, radius, spacing } from "@/constants/theme";
-import { useAuth } from "@/context/AuthContext";
-import { ajukanPenarikan, getSaldo } from "@/lib/api";
 import { Feather } from "@expo/vector-icons";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { router } from "expo-router";
-import React, { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type Href, router } from "expo-router";
+import { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const MIN = 50000;
-const rp = (n: number) => `Rp ${Math.round(n).toLocaleString("id-ID")}`;
-const CHIPS = [50000, 100000, 150000, 200000];
-const INFO = [
-  "Minimal penarikan Rp 50.000",
-  "Proses 1–2 hari kerja",
-  "Gratis biaya admin",
-  "Pastikan data rekening benar",
-];
+import { PesanGalat } from "@/components/ui";
+import { colors, radius, spacing } from "@/constants/theme";
+import { useGalatForm } from "@/hooks/useGalatForm";
+import { ajukanPenarikan, saldoDompet } from "@/lib/api/dompet";
+import { notify } from "@/lib/dialog";
+import { formatRupiah } from "@/lib/rupiah";
+
+/**
+ * Nominal cepat, saran tampilan, bukan aturan.
+ *
+ * Batas minimum penarikan **tidak** ditetapkan di sini. Versi sebelumnya
+ * menanam `MIN = 50000` dan menolak permintaan sebelum sampai ke peladen; kalau
+ * kebijakan berubah, klien diam-diam tidak sepakat dengan peladen dan pengguna
+ * ditolak oleh aturan yang sudah tidak berlaku. Angka minimumnya kini datang
+ * dari respons saldo (`penarikan_minimum`) dan hanya dipakai untuk menjelaskan,
+ * bukan untuk menolak.
+ */
+const NOMINAL_CEPAT = [50_000, 100_000, 150_000, 200_000];
 
 export default function Tarik() {
-  const { user } = useAuth();
   const qc = useQueryClient();
-  const saldoQ = useQuery({ queryKey: ["saldo"], queryFn: getSaldo });
-  const saldo = saldoQ.data ?? Number(user?.saldo ?? 0);
+  const saldoQ = useQuery({
+    queryKey: ["dompet", "saldo"],
+    queryFn: saldoDompet,
+  });
+  const saldo = saldoQ.data?.saldo ?? 0;
+  const minimum = saldoQ.data?.penarikan_minimum ?? null;
 
   const [jumlah, setJumlah] = useState("");
   const [namaBank, setNamaBank] = useState("");
   const [noRek, setNoRek] = useState("");
   const [atasNama, setAtasNama] = useState("");
-  const [loading, setLoading] = useState(false);
+  const galat = useGalatForm();
 
   const angka = Number(jumlah.replace(/\D/g, "")) || 0;
+  const melebihiSaldo = angka > saldo;
 
-  const submit = async () => {
-    if (angka < MIN)
-      return Alert.alert("Jumlah Kurang", `Minimal penarikan ${rp(MIN)}.`);
-    if (angka > saldo)
-      return Alert.alert("Saldo Kurang", "Jumlah melebihi saldo tersedia.");
-    if (!namaBank.trim() || !noRek.trim() || !atasNama.trim())
-      return Alert.alert("Lengkapi", "Isi data rekening dengan lengkap.");
-    setLoading(true);
-    try {
-      await ajukanPenarikan({
+  const ajukan = useMutation({
+    mutationFn: () =>
+      ajukanPenarikan({
         jumlah: angka,
-        nama_bank: namaBank.trim(),
+        // Nama bank opsional di kontrak; string kosong justru akan divalidasi.
+        ...(namaBank.trim() ? { nama_bank: namaBank.trim() } : {}),
         no_rekening: noRek.trim(),
         atas_nama: atasNama.trim(),
-      });
-      qc.invalidateQueries({ queryKey: ["saldo"] });
-      qc.invalidateQueries({ queryKey: ["penarikan"] });
-      Alert.alert(
-        "Berhasil",
-        "Permintaan penarikan diajukan. Menunggu persetujuan admin.",
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/dompet/riwayat" as any),
-          },
-        ],
+      }),
+    onSuccess: async () => {
+      // Saldo sudah dipotong saat pengajuan dibuat, bukan saat disetujui.
+      await qc.invalidateQueries({ queryKey: ["dompet"] });
+      notify(
+        "Permintaan diajukan",
+        "Saldo Anda sudah dipotong dan akan dikembalikan bila pengajuan ditolak.",
       );
-    } catch (e: any) {
-      Alert.alert(
-        "Gagal",
-        e?.response?.data?.message ?? "Tidak dapat mengajukan penarikan.",
+      router.replace("/dompet/penarikan" as Href);
+    },
+    onError: (e: unknown) =>
+      galat.tangani(e, "Tidak dapat mengajukan penarikan. Coba lagi."),
+  });
+
+  const submit = () => {
+    galat.bersihkan();
+    if (angka <= 0)
+      return galat.tandai("jumlah", "Isi jumlah yang ingin ditarik.");
+    // Satu-satunya pemeriksaan nominal di klien: saldo yang tersedia sudah
+    // diketahui pasti dari `/dompet/saldo`, jadi menahan di sini menghemat satu
+    // perjalanan bolak-balik tanpa menduplikasi kebijakan apa pun. Batas
+    // minimum dan maksimum tetap urusan peladen.
+    if (melebihiSaldo)
+      return galat.tandai(
+        "jumlah",
+        `Jumlah melebihi saldo Anda (${formatRupiah(saldo)}).`,
       );
-    } finally {
-      setLoading(false);
-    }
+    if (!noRek.trim())
+      return galat.tandai("no_rekening", "Nomor rekening wajib diisi.");
+    if (!atasNama.trim())
+      return galat.tandai("atas_nama", "Nama pemilik rekening wajib diisi.");
+    ajukan.mutate();
   };
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
       <View style={styles.appbar}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Kembali"
+        >
           <Feather name="arrow-left" size={24} color={colors.text} />
         </Pressable>
         <Text style={styles.appbarTitle}>Tarik Saldo</Text>
       </View>
 
-      <ScrollView
-        contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40 }}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.saldoCard}>
-          <View style={styles.saldoTop}>
-            <Text style={styles.saldoLabel}>Saldo Tersedia</Text>
-            <Feather name="credit-card" size={20} color={colors.white} />
-          </View>
-          <Text style={styles.saldoValue}>{rp(saldo)}</Text>
-        </View>
-
-        <View style={styles.info}>
-          <View style={styles.infoHead}>
-            <Feather name="info" size={18} color="#2563EB" />
-            <Text style={styles.infoTitle}>Informasi Penting</Text>
-          </View>
-          {INFO.map((t, i) => (
-            <View key={i} style={styles.infoRow}>
-              <Text style={styles.infoNum}>{i + 1}.</Text>
-              <Text style={styles.infoText}>{t}</Text>
-            </View>
-          ))}
-        </View>
-
-        <Text style={styles.label}>
-          Jumlah Penarikan <Text style={{ color: colors.danger }}>*</Text>
-        </Text>
-        <View style={styles.amountWrap}>
-          <Text style={styles.rpPrefix}>Rp</Text>
-          <TextInput
-            style={styles.amount}
-            value={angka ? angka.toLocaleString("id-ID") : ""}
-            onChangeText={(t) => setJumlah(t)}
-            placeholder="0"
-            placeholderTextColor="#9AA5B1"
-            keyboardType="number-pad"
-          />
-        </View>
-        <View style={styles.chips}>
-          {CHIPS.map((c) => (
-            <Pressable
-              key={c}
-              style={styles.chip}
-              onPress={() => setJumlah(String(c))}
-            >
-              <Text style={styles.chipText}>{c / 1000}K</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Data Rekening Tujuan</Text>
-          <Field label="Nama Bank" icon="home">
-            <TextInput
-              style={styles.input}
-              value={namaBank}
-              onChangeText={setNamaBank}
-              placeholder="mis. BCA / BRI / Mandiri"
-              placeholderTextColor="#9AA5B1"
-            />
-          </Field>
-          <Field label="Nomor Rekening" icon="credit-card">
-            <TextInput
-              style={styles.input}
-              value={noRek}
-              onChangeText={setNoRek}
-              placeholder="Masukkan nomor rekening"
-              placeholderTextColor="#9AA5B1"
-              keyboardType="number-pad"
-            />
-          </Field>
-          <Field label="Atas Nama" icon="user">
-            <TextInput
-              style={styles.input}
-              value={atasNama}
-              onChangeText={setAtasNama}
-              placeholder="Nama pemilik rekening"
-              placeholderTextColor="#9AA5B1"
-            />
-          </Field>
-        </View>
-
-        <Pressable
-          style={[styles.submit, loading && { opacity: 0.7 }]}
-          onPress={submit}
-          disabled={loading}
+        <ScrollView
+          contentContainerStyle={{ padding: spacing.lg, paddingBottom: 40 }}
+          keyboardShouldPersistTaps="handled"
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitText}>Ajukan Penarikan</Text>
-          )}
-        </Pressable>
-      </ScrollView>
+          <View style={styles.saldoCard}>
+            <View style={styles.saldoTop}>
+              <Text style={styles.saldoLabel}>Saldo Tersedia</Text>
+              <Feather name="credit-card" size={20} color={colors.white} />
+            </View>
+            <Text
+              style={styles.saldoValue}
+              accessibilityLabel={`Saldo tersedia ${formatRupiah(saldo)}`}
+            >
+              {saldoQ.isLoading ? "—" : formatRupiah(saldo)}
+            </Text>
+          </View>
+
+          <PesanGalat pesan={galat.umum} />
+
+          <Text
+            style={[
+              styles.label,
+              (!!galat.field.jumlah || melebihiSaldo) && {
+                color: colors.danger,
+              },
+            ]}
+          >
+            Jumlah Penarikan <Text style={{ color: colors.danger }}>*</Text>
+          </Text>
+          <View
+            style={[
+              styles.nominalWrap,
+              (melebihiSaldo || !!galat.field.jumlah) && {
+                borderColor: colors.danger,
+                backgroundColor: "#FEF2F2",
+              },
+            ]}
+          >
+            <Text style={styles.rpPrefix}>Rp</Text>
+            <TextInput
+              style={styles.nominalInput}
+              keyboardType="number-pad"
+              value={angka ? angka.toLocaleString("id-ID") : ""}
+              onChangeText={setJumlah}
+              placeholder="0"
+              placeholderTextColor="#9AA5B1"
+              accessibilityLabel="Jumlah penarikan dalam rupiah"
+            />
+          </View>
+          {galat.field.jumlah ? (
+            <Text
+              style={styles.errField}
+              accessibilityLiveRegion="polite"
+              accessibilityRole="alert"
+            >
+              {galat.field.jumlah}
+            </Text>
+          ) : melebihiSaldo ? (
+            <Text style={styles.errField} accessibilityLiveRegion="polite">
+              Melebihi saldo Anda ({formatRupiah(saldo)}).
+            </Text>
+          ) : minimum ? (
+            <Text style={styles.bantuField}>
+              Penarikan minimum {formatRupiah(minimum)}.
+            </Text>
+          ) : null}
+
+          <View style={styles.chips}>
+            {NOMINAL_CEPAT.map((n) => (
+              <Pressable
+                key={n}
+                style={[styles.chip, n > saldo && styles.chipMati]}
+                onPress={() => setJumlah(String(n))}
+                disabled={n > saldo}
+                accessibilityRole="button"
+                accessibilityLabel={`Isi ${formatRupiah(n)}`}
+                accessibilityState={{ disabled: n > saldo }}
+              >
+                <Text
+                  style={[styles.chipTeks, n > saldo && { color: "#94A3B8" }]}
+                >
+                  {formatRupiah(n)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={[styles.label, { marginTop: spacing.lg }]}>
+            Rekening Tujuan <Text style={{ color: colors.danger }}>*</Text>
+          </Text>
+
+          <Isian
+            label="Nama Bank"
+            nilai={namaBank}
+            onUbah={setNamaBank}
+            placeholder="mis. BCA, BRI, Mandiri"
+            error={galat.field.nama_bank}
+          />
+          <Isian
+            label="Nomor Rekening"
+            nilai={noRek}
+            onUbah={setNoRek}
+            placeholder="Nomor rekening tujuan"
+            keyboard="number-pad"
+            error={galat.field.no_rekening}
+          />
+          <Isian
+            label="Atas Nama"
+            nilai={atasNama}
+            onUbah={setAtasNama}
+            placeholder="Nama pemilik rekening"
+            error={galat.field.atas_nama}
+          />
+
+          <View style={styles.catatan}>
+            <Feather name="info" size={16} color="#2563EB" />
+            <Text style={styles.catatanTeks}>
+              Pastikan nama pemilik rekening sama dengan yang tertera di buku
+              tabungan. Penarikan yang datanya keliru akan tertolak oleh bank.
+            </Text>
+          </View>
+
+          <Pressable
+            style={[styles.kirim, ajukan.isPending && { opacity: 0.7 }]}
+            onPress={submit}
+            disabled={ajukan.isPending}
+            accessibilityRole="button"
+            accessibilityLabel="Ajukan penarikan saldo"
+            accessibilityState={{ busy: ajukan.isPending }}
+          >
+            {ajukan.isPending ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.kirimTeks}>Ajukan Penarikan</Text>
+            )}
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-function Field({
+function Isian({
   label,
-  icon,
-  children,
+  nilai,
+  onUbah,
+  placeholder,
+  keyboard,
+  error,
 }: {
   label: string;
-  icon: keyof typeof Feather.glyphMap;
-  children: React.ReactNode;
+  nilai: string;
+  onUbah: (v: string) => void;
+  placeholder: string;
+  keyboard?: "number-pad";
+  error?: string;
 }) {
   return (
     <View style={{ marginBottom: 14 }}>
-      <Text style={styles.label}>
-        {label} <Text style={{ color: colors.danger }}>*</Text>
+      <Text style={[styles.isianLabel, !!error && { color: colors.danger }]}>
+        {label}
       </Text>
-      <View style={styles.inputRow}>
-        <Feather name={icon} size={16} color={colors.subtext} />
-        {children}
-      </View>
+      <TextInput
+        style={[
+          styles.isianInput,
+          !!error && {
+            borderColor: colors.danger,
+            backgroundColor: "#FEF2F2",
+          },
+        ]}
+        value={nilai}
+        onChangeText={onUbah}
+        placeholder={placeholder}
+        placeholderTextColor="#9AA5B1"
+        keyboardType={keyboard}
+        accessibilityLabel={label}
+      />
+      {!!error && (
+        <Text
+          style={styles.errField}
+          accessibilityLiveRegion="polite"
+          accessibilityRole="alert"
+        >
+          {error}
+        </Text>
+      )}
     </View>
   );
 }
@@ -222,11 +317,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand,
     borderRadius: radius.lg,
     padding: spacing.lg,
+    marginBottom: spacing.lg,
   },
   saldoTop: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
   },
   saldoLabel: { color: colors.white70, fontSize: 13 },
   saldoValue: {
@@ -235,81 +331,81 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginTop: 6,
   },
-  info: {
-    backgroundColor: "#EFF4FF",
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginTop: 16,
+  label: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.text,
+    marginBottom: 10,
   },
-  infoHead: {
+  nominalWrap: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 10,
-  },
-  infoTitle: { fontWeight: "700", color: colors.text, fontSize: 15 },
-  infoRow: { flexDirection: "row", gap: 8, marginBottom: 6 },
-  infoNum: { color: "#2563EB", fontWeight: "700", fontSize: 13 },
-  infoText: { flex: 1, color: "#334155", fontSize: 13, lineHeight: 18 },
-  label: {
-    fontSize: 14,
-    color: colors.text,
-    marginTop: 18,
-    marginBottom: 8,
-    fontWeight: "600",
-  },
-  amountWrap: {
-    flexDirection: "row",
-    alignItems: "center",
     backgroundColor: colors.white,
-    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
+    borderRadius: radius.md,
     paddingHorizontal: 16,
     height: 56,
   },
-  rpPrefix: { color: colors.subtext, fontSize: 18, marginRight: 8 },
-  amount: { flex: 1, fontSize: 22, fontWeight: "700", color: colors.text },
-  chips: { flexDirection: "row", gap: 10, marginTop: 12 },
-  chip: {
+  rpPrefix: { fontSize: 16, fontWeight: "700", color: colors.subtext },
+  nominalInput: {
     flex: 1,
-    backgroundColor: "#B7E4CE",
-    borderRadius: radius.md,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  chipText: { color: colors.brand, fontWeight: "700" },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginTop: 18,
-  },
-  cardTitle: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: "700",
     color: colors.text,
-    marginBottom: 14,
   },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
+  chip: {
+    minHeight: 40,
+    justifyContent: "center",
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.brand,
+    backgroundColor: colors.white,
+  },
+  chipMati: { borderColor: colors.border, backgroundColor: "#F8FAFC" },
+  chipTeks: { color: colors.brand, fontWeight: "700", fontSize: 13 },
+  isianLabel: { fontSize: 13, color: colors.subtext, marginBottom: 6 },
+  isianInput: {
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
     paddingHorizontal: 14,
-    height: 50,
+    height: 48,
+    color: colors.text,
     backgroundColor: colors.white,
   },
-  input: { flex: 1, color: colors.text, height: "100%" },
-  submit: {
-    backgroundColor: colors.brand,
-    height: 52,
+  catatan: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
+    backgroundColor: "#EFF6FF",
     borderRadius: radius.md,
+    padding: 14,
+    marginTop: 6,
+  },
+  catatanTeks: { flex: 1, fontSize: 12, color: "#1E40AF", lineHeight: 18 },
+  errField: {
+    color: colors.danger,
+    fontSize: 12,
+    marginTop: 6,
+    lineHeight: 17,
+  },
+  bantuField: {
+    color: colors.subtext,
+    fontSize: 12,
+    marginTop: 6,
+    lineHeight: 17,
+  },
+  kirim: {
+    height: 54,
+    borderRadius: radius.md,
+    backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 22,
+    marginTop: 20,
   },
-  submitText: { color: colors.white, fontWeight: "700", fontSize: 15 },
+  kirimTeks: { color: colors.white, fontWeight: "700", fontSize: 15 },
 });

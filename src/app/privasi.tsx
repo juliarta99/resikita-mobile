@@ -9,7 +9,7 @@ const SECTIONS: { title: string; points: string[] }[] = [
   {
     title: "Informasi yang Kami Kumpulkan",
     points: [
-      "Informasi pribadi: nama, NIK, email, nomor telepon, dan tanggal lahir yang kamu berikan saat mendaftar.",
+      "Informasi pribadi: nama dan email yang kamu berikan saat mendaftar, serta nomor telepon, tanggal lahir, dan domisili bila kamu memilih melengkapinya.",
       "Informasi transaksi: data setoran sampah, penarikan saldo, dan riwayat pembelian.",
       "Informasi lokasi: hanya saat kamu memakai fitur peta atau membuat laporan.",
       "Data penggunaan: bagaimana kamu berinteraksi dengan fitur aplikasi.",
@@ -53,7 +53,7 @@ export default function Privasi() {
           <View style={styles.introIcon}><Feather name="shield" size={22} color={colors.white} /></View>
           <View style={{ flex: 1 }}>
             <Text style={styles.introTitle}>Privasi Anda Penting Bagi Kami</Text>
-            <Text style={styles.introDesc}>Kebijakan ini menjelaskan bagaimana Niti Resik mengumpulkan, menggunakan, dan melindungi informasi pribadimu.</Text>
+            <Text style={styles.introDesc}>Kebijakan ini menjelaskan bagaimana Resikita mengumpulkan, menggunakan, dan melindungi informasi pribadimu.</Text>
           </View>
         </View>
         {SECTIONS.map((s) => (
